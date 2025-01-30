@@ -24,23 +24,15 @@ async fn main() {
 
     // Print a cool startup message with ASCII art and emojis
     println!("{}", r#"
-  #####                        ##                          ##  
-  ##  ##                      ##                               
- ##  ##   ##   ##    ##### #######     #####    ####    ####   
- #####    ##   ##   ##       ##      ##   ##   ##  ##     ##   
- ####    ##   ##     ##     ##      ##    ##  ##   ##    ##    
-##  ##   ##  ###      ##    ##      ##  ###   ##  ##     ##    
-##  ##    ### ##  #####      ###     ### ##  #####     ######  
-                                             ##                
-
-    Rustapi - An example API built with Rust, Axum, SQLx, and PostgreSQL
-    GitHub: https://github.com/Riktastic/rustapi
+    Axum-API-Quickstart 
+    - An example API built with Rust, Axum, SQLx, and PostgreSQL
+    - GitHub: https://github.com/Riktastic/Axum-API-Quickstart/
     "#);
 
     println!("🚀 Starting Rustapi...");
 
-    // Retrieve server IP and port from the environment, default to 0.0.0.0:3000
-    let ip: IpAddr = config::get_env_with_default("SERVER_IP", "0.0.0.0")
+    // Retrieve server IP and port from the environment, default to 127.0.0.1:3000
+    let ip: IpAddr = config::get_env_with_default("SERVER_IP", "127.0.0.1")
         .parse()
         .expect("❌ Invalid IP address format. Please provide a valid IPv4 address. For example 0.0.0.0 or 127.0.0.1.");
     let port: u16 = config::get_env_u16("SERVER_PORT", 3000);
