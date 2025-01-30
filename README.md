@@ -73,19 +73,19 @@ rustapi/
 
 | Method | Endpoint               | Auth Required | Allowed Roles | Description                          |
 |--------|------------------------|---------------|---------------|--------------------------------------|
-| POST   | `/signin`              | No            | None          | Authenticate user and get JWT token  |
+| POST   | `/signin`              | No            |           | Authenticate user and get JWT token  |
 | GET    | `/protected`           | Yes           | 1, 2          | Test endpoint for authenticated users |
-| GET    | `/health`              | No            | None          | System health check with metrics     |
+| GET    | `/health`              | No            |           | System health check with metrics     |
 |        |                        |               |               |                                      |
 | **User routes**         |                        |               |               |                                      |
-| GET    | `/users/all`           | No*           | None          | Get all users                        |
-| GET    | `/users/{id}`          | No*           | None          | Get user by ID                       |
-| POST   | `/users/`              | No*           | None          | Create new user                      |
+| GET    | `/users/all`           | No*           |           | Get all users                        |
+| GET    | `/users/{id}`          | No*           |           | Get user by ID                       |
+| POST   | `/users/`              | No*           |           | Create new user                      |
 |        |                        |               |               |                                      |
 | **Todo routes**         |                        |               |               |                                      |
-| GET    | `/todos/all`           | No*           | None          | Get all todos                        |
+| GET    | `/todos/all`           | No*           |           | Get all todos                        |
 | POST   | `/todos/`              | Yes           | 1, 2          | Create new todo                      |
-| GET    | `/todos/{id}`          | No*           | None          | Get todo by ID                       |
+| GET    | `/todos/{id}`          | No*           |           | Get todo by ID                       |
 
 **Key:**  
 🔒 = Requires JWT in `Authorization: Bearer <token>` header  
