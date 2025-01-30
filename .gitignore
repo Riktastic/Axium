@@ -1,0 +1,5 @@
+.env
+/target
+cert.pem
+key.pem
+Cargo.lock

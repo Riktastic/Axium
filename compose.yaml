@@ -1,0 +1,32 @@
+
+services:
+  server:
+    build:
+      context: .
+      target: final
+    ports:
+      - 80:80
+    depends_on:
+      - db_image
+    networks:
+      - common-net
+
+  db_image:
+    image: postgres:latest
+    environment:
+      POSTGRES_PORT: 3306
+      POSTGRES_DATABASE: database_name
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: database_password
+      POSTGRES_ROOT_PASSWORD: strong_database_password
+    expose:
+      - 3306
+    ports:
+      - "3307:3306"
+    networks:
+      - common-net
+
+networks:
+  common-net: {}
+
+        
