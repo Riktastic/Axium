@@ -1,4 +1,4 @@
-# 🦀 RustAPI
+# 🦀 AxumRustAPI
 **An example API built with Rust, Axum, SQLx, and PostgreSQL**  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
