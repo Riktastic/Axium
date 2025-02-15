@@ -1,7 +1,6 @@
 use axum::{
     extract::{State, Extension, Path}, 
-    Json, 
-    response::IntoResponse, 
+    Json,
     http::StatusCode
 };
 use sqlx::postgres::PgPool;
@@ -12,14 +11,21 @@ use crate::models::apikey::*;
 use crate::models::user::*;
 use crate::models::documentation::ErrorResponse;
 use crate::models::apikey::ApiKeyResponse;
+use crate::database::apikeys::{fetch_all_apikeys_from_db, fetch_apikey_by_id_from_db};
+
+// --- Route Handlers ---
 
 // Get all API keys
 #[utoipa::path(
     get,
     path = "/apikeys",
     tag = "apikey",
+    security(
+        ("jwt_token" = [])
+    ),
     responses(
         (status = 200, description = "Get all API keys", body = [ApiKeyResponse]),
+        (status = 401, description = "Unauthorized", body = serde_json::Value),
         (status = 500, description = "Internal Server Error", body = ErrorResponse)
     ),
     params(
@@ -30,19 +36,12 @@ use crate::models::apikey::ApiKeyResponse;
 pub async fn get_all_apikeys(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,  // Extract current user from the request extensions
-) -> impl IntoResponse {
-    let apikeys = sqlx::query_as!(ApiKeyResponse, 
-        "SELECT id, user_id, description, expiration_date, creation_date FROM apikeys WHERE user_id = $1", 
-        user.id
-    )
-    .fetch_all(&pool) // Borrow the connection pool
-    .await;
-
-    match apikeys {
+) -> Result<Json<Vec<ApiKeyResponse>>, (StatusCode, Json<serde_json::Value>)> {
+    match fetch_all_apikeys_from_db(&pool, user.id).await {
         Ok(apikeys) => Ok(Json(apikeys)), // Return all API keys as JSON
         Err(_err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
-            Json(json!({ "error": "Could not get the API key."})),
+            Json(json!({ "error": "Could not get the API keys."})),
         )),
     }
 }
@@ -68,22 +67,14 @@ pub async fn get_apikeys_by_id(
     State(pool): State<PgPool>,
     Extension(user): Extension<User>,  // Extract current user from the request extensions
     Path(id): Path<String>, // Use Path extractor here
-) -> impl IntoResponse {
+) -> Result<Json<ApiKeyByIDResponse>, (StatusCode, Json<serde_json::Value>)> {
     let uuid = match Uuid::parse_str(&id) {
         Ok(uuid) => uuid,
         Err(_) => return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Invalid UUID format." })))),
     };
 
-    let apikeys = sqlx::query_as!(ApiKeyByIDResponse, 
-        "SELECT id, description, expiration_date, creation_date FROM apikeys WHERE id = $1 AND user_id = $2", 
-        uuid, 
-        user.id
-    )
-    .fetch_optional(&pool) // Borrow the connection pool
-    .await;
-
-    match apikeys {
-        Ok(Some(apikeys)) => Ok(Json(apikeys)), // Return the API key as JSON if found
+    match fetch_apikey_by_id_from_db(&pool, uuid, user.id).await {
+        Ok(Some(apikey)) => Ok(Json(apikey)), // Return the API key as JSON if found
         Ok(None) => Err((
             StatusCode::NOT_FOUND,
             Json(json!({ "error": format!("API key with ID '{}' not found.", id) })),

@@ -1,51 +1,140 @@
 use dotenvy::dotenv;
-use sqlx::{PgPool, migrate::Migrator, postgres::PgPoolOptions};
-use std::fs;
-use std::env;
-use std::path::Path;
+use sqlx::{PgPool, migrate::Migrator, migrate::MigrateError, postgres::PgPoolOptions};
+use std::{env, fs, path::Path, time::Duration};
+use thiserror::Error;
 
-/// Connects to the database using the DATABASE_URL environment variable.
-pub async fn connect_to_database() -> Result<PgPool, sqlx::Error> {
-    dotenv().ok();
-    let database_url = &env::var("DATABASE_URL").expect("❌ 'DATABASE_URL' environment variable not fount.");
+// ---------------------------
+// Error Handling
+// ---------------------------
 
-    // Read max and min connection values from environment variables, with defaults
-    let max_connections: u32 = env::var("DATABASE_MAX_CONNECTIONS")
-        .unwrap_or_else(|_| "10".to_string()) // Default to 10
-        .parse()
-        .expect("❌ Invalid 'DATABASE_MAX_CONNECTIONS' value; must be a number.");
+#[derive(Debug, Error)]
+pub enum DatabaseError {
+    #[error("❌  Environment error: {0}")]
+    EnvError(String),
     
-    let min_connections: u32 = env::var("DATABASE_MIN_CONNECTIONS")
-        .unwrap_or_else(|_| "2".to_string()) // Default to 2
-        .parse()
-        .expect("❌ Invalid 'DATABASE_MIN_CONNECTIONS' value; must be a number.");
+    #[error("❌  Connection error: {0}")]
+    ConnectionError(#[from] sqlx::Error),
+    
+    #[error("❌  File system error: {0}")]
+    FileSystemError(String),
+    
+    #[error("❌  Configuration error: {0}")]
+    ConfigError(String),
 
-    // Create and configure the connection pool
+    #[error("❌  Migration error: {0}")]
+    MigrationError(#[from] MigrateError),
+}
+
+// ---------------------------
+// Database Connection
+// ---------------------------
+
+/// Establishes a secure connection to PostgreSQL with connection pooling
+/// 
+/// # Security Features
+/// - Validates database URL format
+/// - Enforces connection limits
+/// - Uses environment variables securely
+/// - Implements connection timeouts
+/// 
+/// # Returns
+/// `Result<PgPool, DatabaseError>` - Connection pool or detailed error
+pub async fn connect_to_database() -> Result<PgPool, DatabaseError> {
+    // Load environment variables securely
+    dotenv().ok();
+    
+    // Validate database URL presence and format
+    let database_url = env::var("DATABASE_URL")
+        .map_err(|_| DatabaseError::EnvError("DATABASE_URL not found".to_string()))?;
+    
+    if !database_url.starts_with("postgres://") {
+        return Err(DatabaseError::ConfigError(
+            "❌  Invalid DATABASE_URL format - must start with postgres://".to_string()
+        ));
+    }
+
+    // Configure connection pool with safety defaults
+    let max_connections = parse_env_var("DATABASE_MAX_CONNECTIONS", 10)?;
+    let min_connections = parse_env_var("DATABASE_MIN_CONNECTIONS", 2)?;
+
     let pool = PgPoolOptions::new()
         .max_connections(max_connections)
         .min_connections(min_connections)
+        .acquire_timeout(Duration::from_secs(5))  // Prevent hanging connections
+        .idle_timeout(Duration::from_secs(300))   // Clean up idle connections
+        .test_before_acquire(true)                // Validate connections
         .connect(&database_url)
-        .await?;
-    
+        .await
+        .map_err(|e| DatabaseError::ConnectionError(e))?;
+
     Ok(pool)
 }
 
-/// Run database migrations
-pub async fn run_database_migrations(pool: &PgPool) -> Result<(), sqlx::Error> {
-    // Define the path to the migrations folder
-    let migrations_path = Path::new("./migrations");
+/// Helper function to safely parse environment variables
+fn parse_env_var<T: std::str::FromStr>(name: &str, default: T) -> Result<T, DatabaseError> 
+where
+    T::Err: std::fmt::Display,
+{
+    match env::var(name) {
+        Ok(val) => val.parse().map_err(|e| DatabaseError::ConfigError(
+            format!("❌  Invalid {} value: {}", name, e)
+        )),
+        Err(_) => Ok(default),
+    }
+}
 
-    // Check if the migrations folder exists, and if not, create it
+// ---------------------------
+// Database Migrations
+// ---------------------------
+
+/// Executes database migrations with safety checks
+/// 
+/// # Security Features
+/// - Validates migrations directory existence
+/// - Limits migration execution to development/staging environments
+/// - Uses transactional migrations where supported
+/// 
+/// # Returns
+/// `Result<(), DatabaseError>` - Success or detailed error
+pub async fn run_database_migrations(pool: &PgPool) -> Result<(), DatabaseError> {
+    let migrations_path = Path::new("./migrations");
+    
+    // Validate migrations directory
     if !migrations_path.exists() {
-        fs::create_dir_all(migrations_path).expect("❌ Failed to create migrations directory. Make sure you have the necessary permissions.");
-        println!("✔️ Created migrations directory: {:?}", migrations_path);
+        fs::create_dir_all(migrations_path)
+            .map_err(|e| DatabaseError::FileSystemError(
+                format!("❌  Failed to create migrations directory: {}", e)
+            ))?;
     }
 
-    // Create a migrator instance that looks for migrations in the `./migrations` folder
-    let migrator = Migrator::new(migrations_path).await?;
+    // Verify directory permissions
+    let metadata = fs::metadata(migrations_path)
+        .map_err(|e| DatabaseError::FileSystemError(
+            format!("❌  Cannot access migrations directory: {}", e)
+        ))?;
+    
+    if metadata.permissions().readonly() {
+        return Err(DatabaseError::FileSystemError(
+            "❌  Migrations directory is read-only".to_string()
+        ));
+    }
 
-    // Run all pending migrations
-    migrator.run(pool).await?;
+    // Initialize migrator with production safety checks
+    let migrator = Migrator::new(migrations_path)
+    .await
+    .map_err(|e| DatabaseError::MigrationError(e))?;
+
+    // Execute migrations in transaction if supported
+    if env::var("ENVIRONMENT").unwrap_or_else(|_| "development".into()) == "production" {
+        println!("🛑  Migration execution blocked in production.");
+        return Err(DatabaseError::ConfigError(
+            "🛑  Direct migrations disabled in production.".to_string()
+        ));
+    }
+
+    migrator.run(pool)
+        .await
+        .map_err(DatabaseError::MigrationError)?;
 
     Ok(())
 }

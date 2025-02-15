@@ -9,43 +9,7 @@ use sysinfo::{System, RefreshKind, Disks};
 use tokio::{task, join};
 use std::sync::{Arc, Mutex};
 use tracing::instrument; // For logging
-use utoipa::ToSchema;
-use serde::{Deserialize, Serialize};
-
-// Struct definitions
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct HealthResponse {
-    pub cpu_usage: CpuUsage,
-    pub database: DatabaseStatus,
-    pub disk_usage: DiskUsage,
-    pub memory: MemoryStatus,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct CpuUsage {
-    #[serde(rename = "available_percentage")]
-    pub available_pct: String,
-    pub status: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct DatabaseStatus {
-    pub status: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct DiskUsage {
-    pub status: String,
-    #[serde(rename = "used_percentage")]
-    pub used_pct: String,
-}
-
-#[derive(Debug, Serialize, Deserialize, ToSchema)]
-pub struct MemoryStatus {
-    #[serde(rename = "available_mb")]
-    pub available_mb: i64,
-    pub status: String,
-}
+use crate::models::health::HealthResponse;
 
 // Health check endpoint
 #[utoipa::path(

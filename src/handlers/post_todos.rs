@@ -1,4 +1,4 @@
-use axum::{extract::{Extension, State}, Json, response::IntoResponse};
+use axum::{extract::{Extension, State}, Json};
 use axum::http::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
@@ -9,6 +9,7 @@ use validator::Validate;
 
 use crate::models::todo::Todo;
 use crate::models::user::User;
+use crate::database::todos::insert_todo_into_db;
 
 // Define the request body structure
 #[derive(Deserialize, Validate, ToSchema)]
@@ -19,24 +20,30 @@ pub struct TodoBody {
     pub description: Option<String>,
 }
 
+// --- Route Handler ---
+
 // Define the API endpoint
 #[utoipa::path(
     post,
     path = "/todos",
     tag = "todo",
+    security(
+        ("jwt_token" = [])
+    ),
     request_body = TodoBody,
     responses(
         (status = 200, description = "Todo created successfully", body = Todo),
         (status = 400, description = "Validation error", body = String),
+        (status = 401, description = "Unauthorized", body = serde_json::Value),
         (status = 500, description = "Internal server error", body = String)
     )
 )]
 #[instrument(skip(pool, user, todo))]
 pub async fn post_todo(
-    State(pool): State<PgPool>, 
+    State(pool): State<PgPool>,
     Extension(user): Extension<User>,
     Json(todo): Json<TodoBody>
-) -> impl IntoResponse {
+) -> Result<Json<Todo>, (StatusCode, Json<serde_json::Value>)> {
     // Validate input
     if let Err(errors) = todo.validate() {
         let error_messages: Vec<String> = errors
@@ -50,27 +57,8 @@ pub async fn post_todo(
         ));
     }
 
-    let row = sqlx::query!(
-        "INSERT INTO todos (task, description, user_id) 
-        VALUES ($1, $2, $3) 
-        RETURNING id, task, description, user_id, creation_date, completion_date, completed",
-        todo.task,
-        todo.description,
-        user.id
-    )
-    .fetch_one(&pool)
-    .await;
-
-    match row {
-        Ok(row) => Ok(Json(Todo {
-            id: row.id,
-            task: row.task,
-            description: row.description,
-            user_id: row.user_id,
-            creation_date: row.creation_date,
-            completion_date: row.completion_date,
-            completed: row.completed,
-        })),
+    match insert_todo_into_db(&pool, todo.task, todo.description, user.id).await {
+        Ok(new_todo) => Ok(Json(new_todo)),
         Err(_err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
             Json(json!({ "error": "Could not create a new todo." }))

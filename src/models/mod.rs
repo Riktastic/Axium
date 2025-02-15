@@ -8,3 +8,9 @@ pub mod role;
 pub mod todo;
 /// Module for documentation related models.
 pub mod documentation;
+/// Module for authentication related models.
+pub mod auth;
+/// Module for the health endpoint related models.
+pub mod health;
+/// Module for the health endpoint related models.
+pub mod usage;

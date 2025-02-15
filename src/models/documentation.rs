@@ -1,11 +1,16 @@
 use utoipa::ToSchema;
+use serde::Serialize;
 
-#[derive(ToSchema)]
+/// Represents a successful response from the API.
+#[derive(Serialize, ToSchema)]
 pub struct SuccessResponse {
-    message: String,
+    /// A message describing the successful operation.
+    pub message: String,
 }
 
-#[derive(ToSchema)]
+/// Represents an error response from the API.
+#[derive(Serialize, ToSchema)]
 pub struct ErrorResponse {
-    error: String,
+    /// A description of the error that occurred.
+    pub error: String,
 }

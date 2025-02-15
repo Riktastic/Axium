@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  axium:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT:-development} #default value if not defined.
+      - SERVER_IP=${SERVER_IP:-0.0.0.0}
+      - SERVER_PORT=${SERVER_PORT:-3000}
+      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true}
+      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2}
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:1234@db/database_name}
+      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20}
+      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5}
+      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false}
+      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true}
+      # Mount volume for certs for HTTPS
+      - SERVER_HTTPS_CERT_FILE_PATH=/app/certs/cert.pem # Changed to /app/certs
+      - SERVER_HTTPS_KEY_FILE_PATH=/app/certs/key.pem  # Changed to /app/certs
+      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5}
+      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1}
+      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true}
+      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-fgr4fe34w2rfTwfe3444234edfewfw4e#f$#wferg23w2DFSdf} #VERY important to change this!
+    depends_on:
+      - db  # Ensure the database is up before the app
+    volumes:
+      - ./certs:/app/certs  # Mount volume for certs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: "1234"  # Change this in production!
+      POSTGRES_DB: database_name # Matches the DB name in .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:

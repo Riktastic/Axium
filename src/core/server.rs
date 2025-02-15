@@ -23,7 +23,7 @@ pub async fn create_server() -> Router {
     // Enable tracing middleware if configured
     if config::get_env_bool("SERVER_TRACE_ENABLED", true) {
         app = app.layer(TraceLayer::new_for_http());
-        println!("✔️  Trace hads been enabled.");
+        println!("✔️   Trace hads been enabled.");
     }
 
     // Enable compression middleware if configured
@@ -32,7 +32,7 @@ pub async fn create_server() -> Router {
         let level = config::get_env("SERVER_COMPRESSION_LEVEL").parse().unwrap_or(6);
         // Apply compression layer with Brotli (br) enabled and the specified compression level
         app = app.layer(CompressionLayer::new().br(true).quality(CompressionLevel::Precise(level)));
-        println!("✔️  Brotli compression enabled with compression quality level {}.", level);
+        println!("✔️   Brotli compression enabled with compression quality level {}.", level);
 
     }
 
