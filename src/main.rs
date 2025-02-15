@@ -45,7 +45,7 @@ async fn shutdown_signal() {
 }
 
 fn display_additional_info(protocol: &str, ip: IpAddr, port: u16) {
-    println!("\n📖  Explore the API using Swagger ({0}://{1}:{2}/swagger)\n    or import the OpenAPI spec ({0}://{1}:{2}/openapi.json).", protocol, ip, port);
+    println!("\n📖  Explore the API using Swagger ({0}://{1}:{2}/docs)\n    or import the OpenAPI spec ({0}://{1}:{2}/openapi.json).", protocol, ip, port);
     println!("\n🩺  Ensure your Docker setup is reliable,\n    by pointing its healthcheck to {0}://{1}:{2}/health", protocol, ip, port);
     println!("\nPress [CTRL] + [C] to gracefully shutdown.");
 }

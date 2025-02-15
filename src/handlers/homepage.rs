@@ -99,7 +99,7 @@ pub async fn homepage() -> impl IntoResponse {
  d8'          `8b  8P'     `Y8  88   `"YbbdP'Y8  88      88      88
                 </h1>
                 <ul>
-                    <li>📖 Explore the API using <a href="/swagger">Swagger UI</a> or import the <a href="/openapi.json">OpenAPI spec</a>.</li>
+                    <li>📖 Explore the API using <a href="/docs">Swagger UI</a> or import the <a href="/openapi.json">OpenAPI spec</a>.</li>
                     <li>🩺 Ensure your Docker setup is reliable, by pointing its healthcheck to <a href="/health">/health</a>.</li>
                 </ul>
                 <a href="https://github.com/Riktastic/Axium" class="github-link" target="_blank">

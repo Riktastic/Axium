@@ -130,7 +130,7 @@ pub fn create_routes(database_connection: PgPool) -> Router {
     let openapi = ApiDoc::openapi();
 
     // Create Swagger UI
-    let swagger_ui = SwaggerUi::new("/swagger")
+    let swagger_ui = SwaggerUi::new("/docs")
         .url("/openapi.json", openapi.clone());
 
     // Combine all routes and add middleware
