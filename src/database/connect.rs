@@ -121,17 +121,16 @@ pub async fn run_database_migrations(pool: &PgPool) -> Result<(), DatabaseError>
 
     // Initialize migrator with production safety checks
     let migrator = Migrator::new(migrations_path)
-    .await
-    .map_err(|e| DatabaseError::MigrationError(e))?;
+        .await
+        .map_err(|e| DatabaseError::MigrationError(e))?;
 
-    // Execute migrations in transaction if supported
+    // Skip migrations execution in production, just print a message
     if env::var("ENVIRONMENT").unwrap_or_else(|_| "development".into()) == "production" {
-        println!("🛑  Migration execution blocked in production.");
-        return Err(DatabaseError::ConfigError(
-            "🛑  Direct migrations disabled in production.".to_string()
-        ));
+        println!("🛑  Migration execution skipped in production.");
+        return Ok(()); // Return early without error
     }
 
+    // Execute migrations in transaction if supported
     migrator.run(pool)
         .await
         .map_err(DatabaseError::MigrationError)?;

@@ -1,6 +1,5 @@
-# Handlers Module for Rust API
-
-This folder contains the route handlers used in the Rust API, responsible for processing incoming HTTP requests and generating responses.
+# Handlers
+This folder contains the route handlers used in Axium, responsible for processing incoming HTTP requests and generating responses.
 
 ## Overview
 The `/src/handlers` folder includes implementations of route handlers for API keys, usage metrics, and the homepage.
