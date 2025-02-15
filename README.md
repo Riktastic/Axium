@@ -25,7 +25,8 @@ _Spec-driven development workflow_
 ### **Enterprise-Grade Security**  
 _Security by design architecture_  
 - JWT authentication with Argon2id password hashing (OWASP recommended)  
-- TLS 1.3/HTTP2 via AWS-LC (FIPS 140-3 compliant cryptography)  
+- TLS 1.3/HTTP2 via AWS-LC (FIPS 140-3 compliant cryptography)
+- Key rotation & expiration
 - Role-Based Access Control (RBAC) implementation:  
 ```rust
 .layer(middleware::from_fn(|req, next| 
