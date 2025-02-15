@@ -218,6 +218,8 @@ cargo run --release
 ### ⚙️ Configuration
 Create a .env file in the root of the project or configure the application using environment variables.
 
+Make sure to change the `JWT_SECRET_KEY`.
+
 ```env
 # ==============================
 # ⚙️ GENERAL CONFIGURATION
@@ -299,5 +301,5 @@ SERVER_COMPRESSION_LEVEL=6
 # ==============================
 
 # JWT secret key.
-JWT_SECRET_KEY="fgr4fe34w2rfTwfe3444234edfewfw4e#f$#wferg23w2DFSdf"
+JWT_SECRET_KEY="Change me!"
 ```

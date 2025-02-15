@@ -25,7 +25,7 @@ services:
       - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1}
       - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true}
       - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-fgr4fe34w2rfTwfe3444234edfewfw4e#f$#wferg23w2DFSdf} #VERY important to change this!
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!} #VERY important to change this!
     depends_on:
       - db  # Ensure the database is up before the app
     volumes:
