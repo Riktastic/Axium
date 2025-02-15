@@ -100,7 +100,7 @@ pub async fn homepage() -> impl IntoResponse {
                 </h1>
                 <ul>
                     <li>📖 Explore the API using <a href="/swagger">Swagger UI</a> or import the <a href="/openapi.json">OpenAPI spec</a>.</li>
-                    <li>🩺 Ensure your Docker setup is reliable, by pointing its healthcheck too <a href="/health">/health</a>.</li>
+                    <li>🩺 Ensure your Docker setup is reliable, by pointing its healthcheck to <a href="/health">/health</a>.</li>
                 </ul>
                 <a href="https://github.com/Riktastic/Axium" class="github-link" target="_blank">
                     <svg height="20" aria-hidden="true" viewBox="0 0 16 16" version="1.1" width="20" data-view-component="true" fill="currentColor">

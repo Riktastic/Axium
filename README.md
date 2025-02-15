@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # 🦖 Axium
 **An example API built with Rust, Axum, SQLx, and PostgreSQL.**  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -90,54 +89,6 @@ _Future-proof codebase management_
 /// - Checks token expiration
 /// - Verifies cryptographic signature
 ```
-=======
-# 🦀 Axum API Quickstart
-**An example API built with Rust, Axum, SQLx, and PostgreSQL**  
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
-## 🚀 Core Features
-- **Rust API template** - Production-ready starter template with modern practices,
-- **PostgreSQL integration** - Full database support with SQLx migrations,
-- **Easy to secure** - HTTP/2 with secure TLS defaults (AWS-LC, FIPS 140-3),
-- **Easy to configure** - `.env` and environment variables,
-- **JWT authentication** - Secure token-based auth with Argon2 password hashing,
-- **Optimized for performance** - Brotli compression,
-- **Comprehensive health monitoring**  
-  Docker-compatible endpoint with system metrics:  
-  ```json
-  {
-    "details": {
-      "cpu_usage": {"available_percentage": "9.85", "status": "low"},
-      "database": {"status": "ok"},
-      "disk_usage": {"status": "ok", "used_percentage": "74.00"},
-      "memory": {"available_mb": 21613, "status": "normal"}
-    },
-    "status": "degraded"
-  }
-  ```
-- **Granular access control** - Role-based endpoint protection:  
-  ```rust
-  .route("/", post(post_todo).layer(axum::middleware::from_fn(|req, next| {
-      let allowed_roles = vec![1, 2];
-      authorize(req, next, allowed_roles)
-  })))
-  ```
-- **User context injection** - Automatic user profile handling in endpoints:  
-  ```rust
-  pub async fn post_todo(
-      Extension(user): Extension<User>,  // Injected user
-      Json(todo): Json<TodoBody>
-  ) -> impl IntoResponse {
-      if todo.user_id != user.id {
-          return Err((StatusCode::FORBIDDEN, Json(json!({ 
-              "error": "Cannot create todos for others" 
-          }))));
-      }
-  ```
-- **Observability** - Integrated tracing,
-- **Documented codebase** - Extensive inline comments for easy modification and readability,
-- **Latest dependencies** - Regularly updated Rust ecosystem crates,
->>>>>>> 830dbdb2074fc62e056ef70d374bea3f26ac0589
 
 ## 🛠️ Technology stack
 | Category              | Key Technologies               |
@@ -149,8 +100,7 @@ _Future-proof codebase management_
 
 ## 📂 Project structure
 ```
-<<<<<<< HEAD
-axium-api/                          # Root project directory
+axium/                          # Root project directory
 ├── 📁 migrations/                  # Database schema migrations (SQLx)
 │
 ├── 📁 src/                         # Application source code
@@ -208,55 +158,6 @@ Each folder has a detailed README.md file which explains the folder in more deta
 | POST   | `/todos/`              | ✅            | 🚫                | Create a new todo.                   |
 | GET    | `/todos/{id}`          | ✅            | 🚫                | Get a todo by ID.                    |
 | DELETE | `/todos/{id}`          | ✅            | 🚫                | Delete a todo by ID.                 |
-=======
-rustapi/
-├── migrations/      # SQL schema migrations. Creates the required tables and inserts demo data.
-├── src/
-│   ├── core/        # Core modules: for reading configuration files, starting the server and configuring HTTPS/
-│   ├── database/    # Database connectivity, getters and setters for the database.
-│   ├── middlewares/ # Currently just the authentication system.
-│   ├── models/      # Data structures
-│   └── routes/      # API endpoints
-│        └── mod.rs      # API endpoint router.
-│   └── .env         # Configuration file.
-└── Dockerfile       # Builds a docker container for the application.
-└── compose.yaml     # Docker-compose.yaml. Runs container for the application (also includes a PostgreSQL-container).
-```
-
-## 🌐 Default API endpoints
-
-| Method | Endpoint               | Auth Required | Allowed Roles | Description                          |
-|--------|------------------------|---------------|---------------|--------------------------------------|
-| POST   | `/signin`              | No            |           | Authenticate user and get JWT token  |
-| GET    | `/protected`           | Yes           | 1, 2          | Test endpoint for authenticated users |
-| GET    | `/health`              | No            |           | System health check with metrics     |
-|        |                        |               |               |                                      |
-| **User routes**         |                        |               |               |                                      |
-| GET    | `/users/all`           | No*           |           | Get all users                        |
-| GET    | `/users/{id}`          | No*           |           | Get user by ID                       |
-| POST   | `/users/`              | No*           |           | Create new user                      |
-|        |                        |               |               |                                      |
-| **Todo routes**         |                        |               |               |                                      |
-| GET    | `/todos/all`           | No*           |           | Get all todos                        |
-| POST   | `/todos/`              | Yes           | 1, 2          | Create new todo                      |
-| GET    | `/todos/{id}`          | No*           |           | Get todo by ID                       |
-
-**Key:**  
-🔒 = Requires JWT in `Authorization: Bearer <token>` header  
-\* Currently unprotected - recommend adding authentication for production  
-**Roles:** 1 = User, 2 = Administrator
-
-**Security notes:**  
-- All POST endpoints expect JSON payloads
-- User creation endpoint should be protected in production
-- Consider adding rate limiting to authentication endpoints
-**Notes:**  
-- 🔒 = Requires JWT in `Authorization: Bearer <token>` header  
-- Roles: `1` = Regular User, `2` = Administrator  
-- *Marked endpoints currently unprotected - recommend adding middleware for production use
-- All POST endpoints expect JSON payloads
-
->>>>>>> 830dbdb2074fc62e056ef70d374bea3f26ac0589
 
 ## 📦 Installation & Usage
 ```bash
@@ -281,15 +182,9 @@ cargo run --release
 | `admin@test.com`    | `test`   | Administrator  |
 
 ⚠️ **Security recommendations:**
-<<<<<<< HEAD
 1. Rotate passwords immediately after initial setup.
 2. Disable default accounts before deploying to production.
 3. Implement proper user management endpoints.
-=======
-1. Rotate passwords immediately after initial setup
-2. Disable default accounts before deploying to production
-3. Implement proper user management endpoints
->>>>>>> 830dbdb2074fc62e056ef70d374bea3f26ac0589
 
 #### Administrative password resets  
 *For emergency access recovery only*  
@@ -323,12 +218,6 @@ cargo run --release
 ### ⚙️ Configuration
 Create a .env file in the root of the project or configure the application using environment variables.
 
-<<<<<<< HEAD
-=======
-### ⚙️ Configuration
-Create a .env file in the root of the project or configure the application using environment variables.
-
->>>>>>> 830dbdb2074fc62e056ef70d374bea3f26ac0589
 ```env
 # ==============================
 # ⚙️ GENERAL CONFIGURATION
