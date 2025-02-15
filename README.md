@@ -100,13 +100,13 @@ _Future-proof codebase management_
 
 ## 📂 Project structure
 ```
-axium/                          # Root project directory
+axium/                              # Root project directory
 ├── 📁 migrations/                  # Database schema migrations (SQLx)
 │
 ├── 📁 src/                         # Application source code
 │   ├── 📁 core/                    # Core application infrastructure
 │   │   ├── config.rs               # Configuration loader (.env, env vars)
-│   │   └── server.rs              # HTTP/HTTPS server initialization
+│   │   └── server.rs               # HTTP/HTTPS server initialization
 │   │
 │   ├── 📁 database/                # Database access layer
 │   │   ├── connection.rs           # Connection pool management
@@ -141,9 +141,9 @@ Each folder has a detailed README.md file which explains the folder in more deta
 | GET    | `/health`              | 🚫            | 🚫                | System health check with metrics     |
 |        |                        |               |                   |                                      |
 | **Apikey routes**         |                        |               |                   |                                      |
-| GET    | `/apikeys/all`         | ✅            | ✅                | Get all apikeys of the current user. |
-| POST   | `/apikeys/`            | ✅            | ✅                | Create a new apikey.                 |
-| GET    | `/apikeys/{id}`        | ✅            | ✅                | Get an apikey by ID.                 |
+| GET    | `/apikeys/all`         | ✅            | 🚫                | Get all apikeys of the current user. |
+| POST   | `/apikeys/`            | ✅            | 🚫                | Create a new apikey.                 |
+| GET    | `/apikeys/{id}`        | ✅            | 🚫                | Get an apikey by ID.                 |
 | DELETE | `/apikeys/{id}`        | ✅            | 🚫                | Delete an apikey by ID.              |
 | POST   | `/apikeys/rotate/{id}` | ✅            | 🚫                | Rotates an API key, disables the old one (grace period 24 hours), returns a new one. |
 |        |                        |               |                   |                                      |
@@ -196,7 +196,7 @@ cargo run --release
    ```
 
 2. **Secure Hash Generation**  
-   Use the integrated CLI tool (never online generators):  
+   Use the integrated CLI tool (never user online generators):  
    ```bash  
    cargo run --bin argon2-cli -- "new_password"  
    # Output: $argon2id$v=19$m=19456,t=2,p=1$b2JqZWN0X2lkXzEyMzQ1$R7Zx7Y4W...
