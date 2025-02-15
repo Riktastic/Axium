@@ -3,11 +3,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🚀 Core Features
-### **Production-Grade Foundation**  
-_Jumpstart secure API development_  
-- Battle-tested Rust template following industry best practices  
-- Built-in scalability patterns for high-traffic environments  
-
 ### **Effortless Deployment**  
 _From zero to production in minutes_  
 - 🐳 Docker Compose stack with pre-configured services  
@@ -154,6 +149,10 @@ Each folder has a detailed README.md file which explains the folder in more deta
 | GET    | `/users/{id}`          | ✅            | ✅                | Get a user by ID.                    |
 | DELETE | `/users/{id}`          | ✅            | ✅                | Delete a user by ID.                 |
 |        |                        |               |                   |                                      |
+| **Usage routes**           |                        |               |                   |                                      |
+| GET    | `/usage/lastweek`           | ✅            | 🚫                | Amount of API calls withim the last week of the current user.   |
+| GET   | `/usage/lastday`              | ✅            | 🚫                | Amount of API calls within last day of the current user.                   |
+| | | | | |
 | **Todo routes**           |                        |               |                   |                                      |
 | GET    | `/todos/all`           | ✅            | 🚫                | Get all todos of the current user.   |
 | POST   | `/todos/`              | ✅            | 🚫                | Create a new todo.                   |
