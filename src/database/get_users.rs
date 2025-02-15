@@ -7,7 +7,7 @@ pub async fn get_user_by_email(pool: &PgPool, email: String) -> Result<User, Str
     let user = sqlx::query_as!(
         User, // Struct type to map the query result
         r#"
-        SELECT id, username, email, password_hash, totp_secret, role_id
+        SELECT id, username, email, password_hash, totp_secret, role_level, tier_level, creation_date
         FROM users
         WHERE email = $1
         "#,

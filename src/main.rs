@@ -10,6 +10,7 @@ mod database;
 mod routes;
 mod models;
 mod middlewares;
+mod handlers;
 
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
@@ -22,25 +23,27 @@ async fn main() {
     dotenvy::dotenv().ok();  // Load environment variables from a .env file
     tracing_subscriber::fmt::init();  // Initialize the logging system
 
-    // Print a cool startup message with ASCII art and emojis
+    // Print a cool startup message with ASCII art and emojis/
     println!("{}", r#"
-  #####                        ##                          ##  
-  ##  ##                      ##                               
- ##  ##   ##   ##    ##### #######     #####    ####    ####   
- #####    ##   ##   ##       ##      ##   ##   ##  ##     ##   
- ####    ##   ##     ##     ##      ##    ##  ##   ##    ##    
-##  ##   ##  ###      ##    ##      ##  ###   ##  ##     ##    
-##  ##    ### ##  #####      ###     ### ##  #####     ######  
-                                             ##                
+                                                                    
+           db                      88                                   
+          d88b                     ""                                   
+         d8'`8b                                                         
+        d8'  `8b      8b,     ,d8  88  88       88  88,dPYba,,adPYba,   
+       d8YaaaaY8b      `Y8, ,8P'   88  88       88  88P'   "88"    "8a  
+      d8""""""""8b       )888(     88  88       88  88      88      88  
+     d8'        `8b    ,d8" "8b,   88  "8a,   ,a88  88      88      88  
+    d8'          `8b  8P'     `Y8  88   `"YbbdP'Y8  88      88      88  
 
-    Rustapi - An example API built with Rust, Axum, SQLx, and PostgreSQL
-    GitHub: https://github.com/Riktastic/rustapi
+    Axium - An example API built with Rust, Axum, SQLx, and PostgreSQL
+    - GitHub: https://github.com/Riktastic/Axium
+
     "#);
 
-    println!("🚀 Starting Rustapi...");
+    println!("🚀 Starting Axium...");
 
-    // Retrieve server IP and port from the environment, default to 0.0.0.0:3000
-    let ip: IpAddr = config::get_env_with_default("SERVER_IP", "0.0.0.0")
+    // Retrieve server IP and port from the environment, default to 127.0.0.1:3000
+    let ip: IpAddr = config::get_env_with_default("SERVER_IP", "127.0.0.1")
         .parse()
         .expect("❌ Invalid IP address format. Please provide a valid IPv4 address. For example 0.0.0.0 or 127.0.0.1.");
     let port: u16 = config::get_env_u16("SERVER_PORT", 3000);

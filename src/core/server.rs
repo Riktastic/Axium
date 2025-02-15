@@ -2,17 +2,20 @@
 use axum::Router;
 
 // Middleware layers from tower_http
-use tower_http::compression::{CompressionLayer, CompressionLevel};  // For HTTP response compression
-use tower_http::trace::TraceLayer;  // For HTTP request/response tracing
+use tower_http::compression::{CompressionLayer, CompressionLevel};  // For HTTP response compression.
+use tower_http::trace::TraceLayer;  // For HTTP request/response tracing.
 
 // Local crate imports for database connection and configuration
-use crate::database::connect::connect_to_database;  // Function to connect to the database
+use crate::database::connect::connect_to_database;  // Function to connect to the database.
+use crate::database::connect::run_database_migrations;  // Function to run database migrations.
 use crate::config;  // Environment configuration helper
 
 /// Function to create and configure the Axum server.
 pub async fn create_server() -> Router {
     // Establish a connection to the database
-    let db = connect_to_database().await.expect("Failed to connect to database.");
+    let db = connect_to_database().await.expect("❌  Failed to connect to database.");
+
+    run_database_migrations(&db).await.expect("❌  Failed to run database migrations.");
     
     // Initialize the routes for the server
     let mut app = crate::routes::create_routes(db);

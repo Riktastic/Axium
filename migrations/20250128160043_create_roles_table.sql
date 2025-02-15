@@ -1,10 +1,11 @@
 -- Create the roles table
 CREATE TABLE IF NOT EXISTS roles (
-    id SERIAL PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     level INT NOT NULL,
     role VARCHAR(255) NOT NULL,
     name VARCHAR(255) NOT NULL,
     description VARCHAR(255),
+    creation_date DATE NOT NULL DEFAULT CURRENT_DATE,  -- Default to the current date
     CONSTRAINT unique_role UNIQUE (role)  -- Add a unique constraint to the 'role' column
 );
 

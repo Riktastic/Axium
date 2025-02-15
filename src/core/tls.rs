@@ -53,13 +53,13 @@ pub fn load_tls_config() -> ServerConfig {
             Item::Sec1Key(key) => Some(PrivateKeyDer::from(key)),
             _ => None,
         })
-        .expect("Failed to read a valid private key.");
+        .expect("❌  Failed to read a valid private key.");
 
     // Build and return the TLS server configuration
     ServerConfig::builder()
         .with_no_client_auth()  // No client authentication
         .with_single_cert(cert_chain, key)  // Use the provided cert and key
-        .expect("Failed to create TLS configuration")
+        .expect("❌  Failed to create TLS configuration.")
 }
 
 // Custom listener that implements axum::serve::Listener
@@ -91,11 +91,11 @@ impl Listener for TlsListener {
                 // Perform TLS handshake
                 match acceptor.accept(stream).await {
                     Ok(tls_stream) => {
-                        tracing::info!("Successful TLS handshake with {}", addr);
+                        tracing::info!("Successful TLS handshake with {}.", addr);
                         return (TlsStreamWrapper(tls_stream), addr);  // Return TLS stream and address
                     },
                     Err(e) => {
-                        tracing::warn!("TLS handshake failed: {} (Client may not trust certificate)", e);
+                        tracing::warn!("TLS handshake failed: {} (Client may not trust certificate).", e);
                         continue;  // Retry on error
                     }
                 }

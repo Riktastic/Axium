@@ -1,0 +1,316 @@
+{
+  "name": "Axium",
+  "version": "1",
+  "items": [
+    {
+      "type": "http",
+      "name": "Health",
+      "seq": 3,
+      "request": {
+        "url": "{{base_url}}/health",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Protected",
+      "seq": 4,
+      "request": {
+        "url": "{{base_url}}/protected",
+        "method": "GET",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Bearer {{token}}",
+            "enabled": true
+          }
+        ],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Sign-in",
+      "seq": 1,
+      "request": {
+        "url": "{{base_url}}/signin",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"email\":\"user@test.com\",\n  \"password\":\"test\"\n}",
+          "formUrlEncoded": [],
+          "multipartForm": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "folder",
+      "name": "To do's",
+      "root": {
+        "request": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{token}}",
+              "enabled": true,
+              "uid": "PRiX2eBEKKPlsc1xxRHeN"
+            }
+          ]
+        },
+        "meta": {
+          "name": "To do's"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Get all",
+          "seq": 1,
+          "request": {
+            "url": "{{base_url}}/todos/all",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get by ID",
+          "seq": 2,
+          "request": {
+            "url": "{{base_url}}/todos/1",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Post new",
+          "seq": 3,
+          "request": {
+            "url": "{{base_url}}/todos/",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"task\": \"Finish Rust project.\",\n  \"description\": \"Complete the API endpoints for the todo app.\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Users",
+      "root": {
+        "request": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{token}}",
+              "enabled": true,
+              "uid": "Dv1ZS2orRQaKpVNKRBmLf"
+            }
+          ]
+        },
+        "meta": {
+          "name": "Users"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Get all",
+          "seq": 1,
+          "request": {
+            "url": "{{base_url}}/users/all",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "",
+                "value": "",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Post new",
+          "seq": 3,
+          "request": {
+            "url": "{{base_url}}/users/",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"username\": \"MyNewUser\",\n  \"email\": \"MyNewUser@test.com\",\n  \"password\": \"MyNewUser\",\n  \"totp\": \"true\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get by ID",
+          "seq": 2,
+          "request": {
+            "url": "{{base_url}}/users/1",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "activeEnvironmentUid": "6LVIlBNVHmWamnS5xdrf0",
+  "environments": [
+    {
+      "variables": [
+        {
+          "name": "base_url",
+          "value": "http://127.0.0.1:3000",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "token",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        }
+      ],
+      "name": "Default"
+    }
+  ],
+  "root": {
+    "request": {
+      "vars": {}
+    }
+  },
+  "brunoConfig": {
+    "version": "1",
+    "name": "Axium",
+    "type": "collection",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ]
+  }
+}

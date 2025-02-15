@@ -1,10 +1,63 @@
-use axum::{response::IntoResponse, Json, extract::State};
+use axum::{
+    response::IntoResponse, 
+    Json, 
+    extract::State
+};
 use serde_json::json;
 use sqlx::PgPool;
 use sysinfo::{System, RefreshKind, Disks};
 use tokio::{task, join};
 use std::sync::{Arc, Mutex};
+use tracing::instrument; // For logging
+use utoipa::ToSchema;
+use serde::{Deserialize, Serialize};
 
+// Struct definitions
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct HealthResponse {
+    pub cpu_usage: CpuUsage,
+    pub database: DatabaseStatus,
+    pub disk_usage: DiskUsage,
+    pub memory: MemoryStatus,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct CpuUsage {
+    #[serde(rename = "available_percentage")]
+    pub available_pct: String,
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct DatabaseStatus {
+    pub status: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct DiskUsage {
+    pub status: String,
+    #[serde(rename = "used_percentage")]
+    pub used_pct: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, ToSchema)]
+pub struct MemoryStatus {
+    #[serde(rename = "available_mb")]
+    pub available_mb: i64,
+    pub status: String,
+}
+
+// Health check endpoint
+#[utoipa::path(
+    get,
+    path = "/health",
+    tag = "health",
+    responses(
+        (status = 200, description = "Successfully fetched health status", body = HealthResponse),
+        (status = 500, description = "Internal server error")
+    )
+)]
+#[instrument(skip(database_connection))]
 pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoResponse {
     // Use Arc and Mutex to allow sharing System between tasks
     let system = Arc::new(Mutex::new(System::new_with_specifics(RefreshKind::everything())));
@@ -51,7 +104,7 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
             status = "degraded";
         }
     } else {
-        details["cpu_usage"] = json!({ "status": "error", "error": "Failed to retrieve CPU usage" });
+        details["cpu_usage"] = json!({ "status": "error", "message": "Failed to retrieve CPU usage" });
         status = "degraded";
     }
 
@@ -62,7 +115,7 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
             status = "degraded";
         }
     } else {
-        details["memory"] = json!({ "status": "error", "error": "Failed to retrieve memory information" });
+        details["memory"] = json!({ "status": "error", "message": "Failed to retrieve memory information" });
         status = "degraded";
     }
 
@@ -73,7 +126,7 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
             status = "degraded";
         }
     } else {
-        details["disk_usage"] = json!({ "status": "error", "error": "Failed to retrieve disk usage" });
+        details["disk_usage"] = json!({ "status": "error", "message": "Failed to retrieve disk usage" });
         status = "degraded";
     }
 
@@ -84,7 +137,7 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
             status = "degraded";
         }
     } else {
-        details["important_processes"] = json!({ "status": "error", "error": "Failed to retrieve process information" });
+        details["important_processes"] = json!({ "status": "error", "message": "Failed to retrieve process information" });
         status = "degraded";
     }
 
@@ -95,7 +148,7 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
             status = "degraded";
         }
     } else {
-        details["database"] = json!({ "status": "error", "error": "Failed to retrieve database status" });
+        details["database"] = json!({ "status": "error", "message": "Failed to retrieve database status" });
         status = "degraded";
     }
 
@@ -106,7 +159,7 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
             status = "degraded";
         }
     } else {
-        details["network"] = json!({ "status": "error", "error": "Failed to retrieve network status" });
+        details["network"] = json!({ "status": "error", "message": "Failed to retrieve network status" });
         status = "degraded";
     }
 
@@ -118,6 +171,7 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
 
 // Helper functions
 
+#[instrument]
 fn check_cpu_usage(system: &mut System) -> Result<serde_json::Value, ()> {
     system.refresh_cpu_usage();
     let usage = system.global_cpu_usage();
@@ -129,6 +183,7 @@ fn check_cpu_usage(system: &mut System) -> Result<serde_json::Value, ()> {
     }))
 }
 
+#[instrument]
 fn check_memory(system: &mut System) -> Result<serde_json::Value, ()> {
     system.refresh_memory();
     let available = system.available_memory() / 1024 / 1024; // Convert to MB
@@ -138,6 +193,7 @@ fn check_memory(system: &mut System) -> Result<serde_json::Value, ()> {
     }))
 }
 
+#[instrument]
 fn check_disk_usage() -> Result<serde_json::Value, ()> {
     // Create a new Disks object and refresh the disk information
     let mut disks = Disks::new();
@@ -163,6 +219,7 @@ fn check_disk_usage() -> Result<serde_json::Value, ()> {
     }))
 }
 
+#[instrument]
 fn check_processes(system: &mut System, processes: &[&str]) -> Result<Vec<serde_json::Value>, ()> {
     system.refresh_processes(sysinfo::ProcessesToUpdate::All, true);
     
