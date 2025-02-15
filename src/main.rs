@@ -57,6 +57,7 @@ async fn main() {
     tracing_subscriber::fmt::init();  // Initialize the logging system
 
     println!("{}", r#"
+<<<<<<< HEAD
            db                      88                                   
           d88b                     ""                                   
          d8'`8b                                                         
@@ -68,10 +69,19 @@ async fn main() {
 
               - GitHub: https://github.com/Riktastic/Axium
               - Version: 1.0
+=======
+    Axum-API-Quickstart 
+    - An example API built with Rust, Axum, SQLx, and PostgreSQL
+    - GitHub: https://github.com/Riktastic/Axum-API-Quickstart/
+>>>>>>> 830dbdb2074fc62e056ef70d374bea3f26ac0589
     "#);
 
     println!("🦖  Starting Axium...");
 
+<<<<<<< HEAD
+=======
+    // Retrieve server IP and port from the environment, default to 127.0.0.1:3000
+>>>>>>> 830dbdb2074fc62e056ef70d374bea3f26ac0589
     let ip: IpAddr = config::get_env_with_default("SERVER_IP", "127.0.0.1")
         .parse()
         .expect("❌  Invalid IP address format.");
