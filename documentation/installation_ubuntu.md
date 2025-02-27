@@ -131,7 +131,7 @@ Run the migrations to create the necessary tables:
 ```sh
 sqlx migrate run
 ```
-- If this fails, reinstall SQLx or verify your database permissions.
+- If this fails, reinstall SQLx, check the `DATABASE_URL` or verify your database permissions.
 
 ---
 
