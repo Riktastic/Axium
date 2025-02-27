@@ -13,22 +13,22 @@ sudo apt update && sudo apt upgrade -y
 
 ---
 
-### **2. Install Rust Using rustup**
-Install Rust using the official rustup installer:
+### **2. Install Rust using RustUp**
+Install Rust using the official RustUp installer:
 ```sh
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 ---
 
-### **3. Reload the Shell Environment to Include Cargo**
+### **3. Reload the shell environment to include Cargo**
 ```sh
 source $HOME/.cargo/env
 ```
 
 ---
 
-### **4. Install Dependencies Required for SQLx**
+### **4. Install dependencies required for SQLx**
 Install the necessary packages to compile and link dependencies for SQLx:
 ```sh
 sudo apt install -y build-essential pkg-config libssl-dev libsqlite3-dev pkg-config git
@@ -36,7 +36,7 @@ sudo apt install -y build-essential pkg-config libssl-dev libsqlite3-dev pkg-con
 
 ---
 
-### **5. Install SQLx CLI with PostgreSQL Support**
+### **5. Install SQLx CLI with PostgreSQL support**
 Install the SQLx CLI tool with PostgreSQL support:
 ```sh
 cargo install sqlx-cli --no-default-features --features postgres
@@ -44,7 +44,7 @@ cargo install sqlx-cli --no-default-features --features postgres
 
 ---
 
-### **6. Install Dependencies for AWS-LC-RS**
+### **6. Install the dependencies for AWS-LC-RS**
 Install the dependencies required to work with AWS-LC-RS, which adds certificate handling support to Rust’s `rustls`:
 ```sh
 sudo apt install -y cmake ninja-build clang pkg-config
@@ -52,7 +52,7 @@ sudo apt install -y cmake ninja-build clang pkg-config
 
 ---
 
-### **7. Install PostgreSQL and Required Extensions**
+### **7. Install PostgreSQL and required extensions**
 Install PostgreSQL along with useful extensions:
 ```sh
 sudo apt install -y postgresql postgresql-contrib
@@ -60,7 +60,7 @@ sudo apt install -y postgresql postgresql-contrib
 
 ---
 
-### **8. Start and Enable PostgreSQL Service**
+### **8. Start and enable the PostgreSQL service**
 Start PostgreSQL and set it to run at startup:
 ```sh
 sudo systemctl start postgresql
@@ -69,7 +69,7 @@ sudo systemctl enable postgresql
 
 ---
 
-### **9. Configure the PostgreSQL Database**
+### **9. Configure the PostgreSQL database**
 Switch to the PostgreSQL user:
 ```sh
 sudo -i -u postgres
@@ -105,7 +105,7 @@ exit
 
 ---
 
-### **10. Clone the Axium Repository**
+### **10. Clone the Axium repository**
 Clone the Axium repository from GitHub:
 ```sh
 git clone https://github.com/Riktastic/Axium.git
@@ -113,7 +113,7 @@ git clone https://github.com/Riktastic/Axium.git
 
 ---
 
-### **11. Set Up the Project**
+### **11. Set up the project**
 Navigate to the project directory and copy the example environment file:
 ```sh
 cd Axium && cp .env.example .env
@@ -126,7 +126,7 @@ nano .env  # Update to: DATABASE_URL="postgres://myuser:mypassword@localhost/myd
 
 ---
 
-### **12. Run Database Migrations**
+### **12. Run the database migrations**
 Run the migrations to create the necessary tables:
 ```sh
 sqlx migrate run
@@ -135,7 +135,7 @@ sqlx migrate run
 
 ---
 
-### **13. Build and Run the Axium Application**
+### **13. Build and run the Axium application**
 Build and run the Axium application:
 ```sh
 cargo run
