@@ -159,18 +159,14 @@ Each folder has a detailed README.md file which explains the folder in more deta
 | GET    | `/todos/{id}`          | ✅            | 🚫                | Get a todo by ID.                    |
 | DELETE | `/todos/{id}`          | ✅            | 🚫                | Delete a todo by ID.                 |
 
-## 📦 Installation & Usage
-```bash
-# Clone and setup
-git clone https://github.com/Riktastic/Axium.git
-cd Axium && cp .env.example .env
+## 📦 Installation & usage
+To get started with Axium, you'll need to install it on your system. We provide detailed installation guides for different environments:
 
-# Database setup
-sqlx database create && sqlx migrate run
+- **Docker setup**: Follow the instructions in [Docker Setup Guide](/documentation/installation_docker.md) to run Axium using Docker Compose.
+- **Ubuntu setup**: For users on Ubuntu or other Debian-based systems, refer to the [Ubuntu Setup Guide](/documentation/installation_ubuntu.md).
+- **Windows setup**: Windows users can find their setup instructions in the [Windows Setup Guide](/documentation/installation_windows.md).
 
-# Start server
-cargo run --release
-```
+These guides cover cloning the repository, setting up the environment, configuring the database, and running the application.
 
 ### 🔐 Default accounts
 
