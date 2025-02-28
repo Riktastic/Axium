@@ -1,53 +1,115 @@
-version: "3.9"
-
 services:
+  # Service for the Axium application
   axium:
+    # Build the Docker image from the current directory using the specified Dockerfile
     build:
       context: .
       dockerfile: Dockerfile
+
+    # Map ports from the container to the host machine
     ports:
-      - "3000:3000"
+      - "${SERVER_PORT:-3000}:${SERVER_PORT:-3000}" # Expose server port
+
+    # Environment variables for the service
     environment:
-      - ENVIRONMENT=${ENVIRONMENT:-development} #default value if not defined.
-      - SERVER_IP=${SERVER_IP:-0.0.0.0}
-      - SERVER_PORT=${SERVER_PORT:-3000}
-      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true}
-      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2}
-      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:1234@db/database_name}
-      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20}
-      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5}
-      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false}
-      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true}
-      # Mount volume for certs for HTTPS
-      - SERVER_HTTPS_CERT_FILE_PATH=/app/certs/cert.pem # Changed to /app/certs
-      - SERVER_HTTPS_KEY_FILE_PATH=/app/certs/key.pem  # Changed to /app/certs
-      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5}
-      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1}
-      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true}
-      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6}
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!} #VERY important to change this!
+      # Set environment (e.g., development, production)
+      - ENVIRONMENT=${ENVIRONMENT:-development} # Default to development if not set
+
+      # Server settings
+      - SERVER_IP=${SERVER_IP:-0.0.0.0} # Default IP to listen on
+      - SERVER_PORT=${SERVER_PORT:-3000} # Default port to listen on
+      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true} # Enable tracing by default
+      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2} # Number of worker threads
+
+      # Database connection settings
+      - DATABASE_URL=postgres://${DATABASE_USER:-dbuser}:${DATABASE_PASSWORD:-1234}@db/${DATABASE_DB:-axium}
+      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20} # Max database connections
+      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5} # Min database connections
+
+      # HTTPS settings
+      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false} # Disable HTTPS by default
+      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true} # Enable HTTP/2 for HTTPS
+
+      # Certificate paths for HTTPS
+      - SERVER_HTTPS_CERT_FILE_PATH=/app/certs/cert.pem
+      - SERVER_HTTPS_KEY_FILE_PATH=/app/certs/key.pem
+
+      # Rate limiting settings
+      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5} # Default rate limit
+      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1} # Rate limit period in seconds
+
+      # Compression settings
+      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true} # Enable compression by default
+      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6} # Compression level
+
+      # JWT secret key (change this in production!)
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!} # VERY important to change this!
+
+    # Depend on the database service and wait until it's healthy
     depends_on:
-      - db  # Ensure the database is up before the app
+      db:
+        condition: service_healthy
+
+    # Mount volumes for certificates
     volumes:
-      - ./certs:/app/certs  # Mount volume for certs
+      - ./certs:/app/certs  # Mount local certs directory to container
+
+    # Health check settings
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
+      # Test the health of the service by checking the /health endpoint
+      test: ["CMD", "curl", "-f", "http://${SERVER_IP:-0.0.0.0}:${SERVER_PORT:-3000}/health"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Timeout after 5 seconds
+      retries: 3 # Retry up to 3 times
+      start_period: 15s # Wait 15 seconds before starting checks
 
+    # Resource limits for the service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${AXIUM_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 512MB)
+          memory: ${AXIUM_MEMORY_LIMIT:-512M}
+
+  # Service for the PostgreSQL database
   db:
-    image: postgres:16-alpine
-    restart: always
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "1234"  # Change this in production!
-      POSTGRES_DB: database_name # Matches the DB name in .env
-    ports:
-      - "5432:5432"
-    volumes:
-      - db_data:/var/lib/postgresql/data
+    # Use the official PostgreSQL 17 Alpine image
+    image: postgres:17-alpine
 
-volumes:
-  db_data:
+    # Always restart the container if it fails
+    restart: always
+
+    # Environment variables for the database
+    environment:
+      # Set database user, password, and database name
+      - POSTGRES_USER=${DATABASE_USER:-dbuser}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-1234}
+      - POSTGRES_DB=${DATABASE_DB:-axium}
+
+    # Map the database port to the host machine
+    ports:
+      - "5432:5432" # Expose PostgreSQL port
+
+    # Mount volumes for database data and logs
+    volumes:
+      - ./docker/db/data:/var/lib/postgresql/data   # Store database data
+      - ./docker/db/logs:/var/log/postgresql        # Store logs
+
+    # Health check settings for the database
+    healthcheck:
+      # Test the health of the database using pg_isready
+      test: ["CMD", "pg_isready", "-U", "${DATABASE_USER:-dbuser}"]
+      interval: 60s # Check every minute
+      timeout: 10s # Timeout after 10 seconds
+      retries: 5 # Retry up to 5 times
+      start_period: 15s # Wait 15 seconds before starting checks
+
+    # Resource limits for the database service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${DB_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 256MB)
+          memory: ${DB_MEMORY_LIMIT:-256M}

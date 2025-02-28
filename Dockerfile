@@ -1,56 +1,67 @@
 # --- Stage 1: Builder Stage ---
-    FROM rust:1.75-slim-bookworm AS builder
+    FROM rust:1.84-alpine AS builder
 
     WORKDIR /app
     
-    # Install required build dependencies
-    RUN apt-get update && apt-get install -y --no-install-recommends \
-        pkg-config \
-        libssl-dev \
-        && rm -rf /var/lib/apt/lists/*
+    # Install required build dependencies for Rust and SQLx
+    RUN apk add --no-cache \
+        pkgconfig \
+        openssl-dev \
+        sqlite-dev \
+        build-base \
+        cmake \
+        curl \
+        ninja-build \
+        clang \
+        && rm -rf /var/cache/apk/*
     
-    # Cache dependencies
-    COPY Cargo.toml Cargo.lock ./
-    RUN cargo fetch --locked
+    # Cache dependencies (from Cargo.toml and Cargo.lock) to speed up future builds
+    COPY Cargo.toml ./
+    RUN cargo fetch
     
-    # Copy source code
+    # Copy the source code for the application
     COPY src src/
-    COPY build.rs build.rs
+    
+    # Set SQLX_OFFLINE to true for offline SQLx compilation
+    ENV SQLX_OFFLINE=true
+    
+    # Copy the pre-generated SQLx metadata for offline mode
+    COPY .sqlx .sqlx/
+    
+    # Copy the migrations folder
+    COPY migrations migrations/
     
     # Build the application in release mode
-    RUN cargo build --release --locked
+    RUN cargo build --release --locked --no-default-features
     
     # Strip debug symbols to reduce binary size
     RUN strip /app/target/release/Axium
     
-    
     # --- Stage 2: Runtime Stage ---
-    FROM debian:bookworm-slim
+    FROM alpine:latest
     
-    # Install runtime dependencies only
-    RUN apt-get update && apt-get install -y --no-install-recommends \
+    # Install runtime dependencies only (ca-certificates, openssl)
+    RUN apk add --no-cache \
         ca-certificates \
         openssl \
-        && rm -rf /var/lib/apt/lists/*
+        && rm -rf /var/cache/apk/*
     
-    # Create non-root user
-    RUN useradd --no-log-init -r -m -u 1001 appuser
+    # Create non-root user for security purposes
+    RUN adduser -D -u 1001 appuser
     
     WORKDIR /app
     
-    # Copy built binary from builder stage
+    # Copy the built binary from the builder stage
     COPY --from=builder /app/target/release/Axium .
     
-    # Copy environment file (consider secrets management for production)
-    COPY .env .env
-    
-    # Change ownership to non-root user
+    # Ensure the .env file and other app files have the correct ownership and permissions
     RUN chown -R appuser:appuser /app
     
+    # Switch to the non-root user
     USER appuser
     
-    # Expose the application port
+    # Expose the application port (default 3000)
     EXPOSE 3000
     
-    # Run the application
+    # Run the application when the container starts
     CMD ["./Axium"]    
