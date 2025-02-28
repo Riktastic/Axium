@@ -52,6 +52,6 @@ The shown commands except nano will work on Windows' PowerShell (you can use not
 
 After sucessfully building the image, it will start two containers:
 - axium-axium-1: Axium,
-- axium-db-1: The PostgreSQL database
+- axium-db-1: The PostgreSQL database.
 
 The database will store its files within the `./docker` folder.
