@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE apikeys \n        SET \n            disabled = TRUE,\n            expiration_date = CURRENT_DATE + INTERVAL '1 day'\n        WHERE id = $1 AND user_id = $2\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4c70d4136a90fa3de1657436935b87ee52c4378d06980f1550b02bb6157fb3dd"
+}

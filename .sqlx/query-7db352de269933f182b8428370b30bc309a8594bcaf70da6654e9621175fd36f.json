@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT COUNT(*) as count\n        FROM apikeys\n        WHERE \n            user_id = $1 \n            AND disabled = FALSE \n            AND (expiration_date IS NULL OR expiration_date >= CURRENT_DATE)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "count",
+        "type_info": "Int8"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "7db352de269933f182b8428370b30bc309a8594bcaf70da6654e9621175fd36f"
+}

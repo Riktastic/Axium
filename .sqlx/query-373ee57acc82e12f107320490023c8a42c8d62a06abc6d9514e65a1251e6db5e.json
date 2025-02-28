@@ -1,0 +1,41 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, description, expiration_date, creation_date \n        FROM apikeys \n        WHERE id = $1 AND user_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "description",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "expiration_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 3,
+        "name": "creation_date",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "373ee57acc82e12f107320490023c8a42c8d62a06abc6d9514e65a1251e6db5e"
+}

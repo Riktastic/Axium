@@ -1,0 +1,60 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO todos (task, description, user_id) \n        VALUES ($1, $2, $3) \n        RETURNING id, user_id, task, description, creation_date, completion_date, completed",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "user_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "task",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "description",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "creation_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 5,
+        "name": "completion_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 6,
+        "name": "completed",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "Text",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "bfe67961d2ea262c27e871ad79b3fc38d68656efa70ef6107ce74d76f2bfa60c"
+}

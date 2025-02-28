@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, key_hash, expiration_date\n        FROM apikeys\n        WHERE \n            user_id = $1 \n            AND disabled = FALSE \n            AND (expiration_date IS NULL OR expiration_date > CURRENT_DATE)\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "key_hash",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "expiration_date",
+        "type_info": "Date"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "9abb5a5815bc898509da6e0138feab8d1a9f7ff944fa03c03d618bc2cb2436c2"
+}

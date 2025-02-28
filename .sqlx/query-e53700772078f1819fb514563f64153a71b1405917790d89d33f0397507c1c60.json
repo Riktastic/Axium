@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT requests_per_day FROM tiers WHERE level = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "requests_per_day",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e53700772078f1819fb514563f64153a71b1405917790d89d33f0397507c1c60"
+}
