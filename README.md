@@ -2,6 +2,27 @@
 **An example API built with Rust, Axum, SQLx, and PostgreSQL.**  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Summary
+Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
+
+## Table of Contents
+1. [🚀 Core Features](#-core-features)
+2. [🛠️ Technology Stack](#%EF%B8%8F-technology-stack)
+3. [📂 Project Structure](#-project-structure)
+4. [🌐 Default API Endpoints](#-default-api-endpoints)
+5. [📦 Installation & Usage](#-installation--usage)
+   - [🐳 Docker setup guide](/documentation/installation_docker.md)
+   - [🐧 Ubuntu setup guide](/documentation/installation_ubuntu.md)
+   - [🖥️ Windows setup guide](/documentation/installation_windows.md)
+   - [🔐 Default Accounts](#-default-accounts)
+   - [⚙️ Configuration](#%EF%B8%8F-configuration)
+7. [🤝 Contributing](#-contributing)
+   - [📝 How to Contribute](#-how-to-contribute)
+   - [🔍 Code Style](#-code-style)
+   - [🛠️ Reporting Bugs](#%EF%B8%8F-reporting-bugs)
+   - [💬 Discussion](#-discussion)
+   - [🧑‍💻 Code of Conduct](#-code-of-conduct)
+
 ## 🚀 Core Features
 ### **Effortless Deployment**  
 _From zero to production in minutes_  
@@ -162,9 +183,9 @@ Each folder has a detailed README.md file which explains the folder in more deta
 ## 📦 Installation & usage
 To get started with Axium, you'll need to install it on your system. We provide detailed installation guides for different environments:
 
-- **Docker setup**: Follow the instructions in [Docker Setup Guide](/documentation/installation_docker.md) to run Axium using Docker Compose.
-- **Ubuntu setup**: For users on Ubuntu or other Debian-based systems, refer to the [Ubuntu Setup Guide](/documentation/installation_ubuntu.md).
-- **Windows setup**: Windows users can find their setup instructions in the [Windows Setup Guide](/documentation/installation_windows.md).
+- **Docker setup**: Follow the instructions in [Docker setup guide](/documentation/installation_docker.md) to run Axium using Docker Compose.
+- **Ubuntu setup**: For users on Ubuntu or other Debian-based systems, refer to the [Ubuntu setup Guide](/documentation/installation_ubuntu.md).
+- **Windows setup**: Windows users can find their setup instructions in the [Windows setup guide](/documentation/installation_windows.md).
 
 These guides cover cloning the repository, setting up the environment, configuring the database, and running the application.
 
