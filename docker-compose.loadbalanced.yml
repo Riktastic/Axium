@@ -1,0 +1,252 @@
+services:
+  # HAProxy Load Balancer
+  haproxy:
+    # Use the latest HAProxy image
+    image: haproxy:latest
+    # Map port 80 from the container to the host machine
+    ports:
+      - "80:80"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        cat > /usr/local/etc/haproxy/haproxy.cfg << EOF
+        global
+          daemon
+          maxconn 256
+
+        defaults
+          mode http
+          timeout connect 5000ms
+          timeout client 50000ms
+          timeout server 50000ms
+
+        frontend http-in
+          bind *:80
+          default_backend servers
+
+        backend servers
+          balance roundrobin
+          server server1 axium:3000 check
+          server server2 axium2:3001 check
+        EOF
+        haproxy -f /usr/local/etc/haproxy/haproxy.cfg
+    # Depend on the Axium services and wait until they're ready
+    # Depend on both PostgreSQL databases and wait until they're healthy
+    depends_on:
+      axium:
+        condition: service_healthy
+      axium2:
+        condition: service_healthy
+
+  # Service for the Axium application
+  axium:
+    # Build the Docker image from the current directory using the specified Dockerfile
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # Map ports from the container to the host machine
+    ports:
+      - "${SERVER_PORT:-3000}:${SERVER_PORT:-3000}" # Expose server port
+
+    # Environment variables for the service
+    environment:
+      # Set environment (e.g., development, production)
+      - ENVIRONMENT=${ENVIRONMENT:-development} # Default to development if not set
+
+      # Server settings
+      - SERVER_IP=${SERVER_IP:-0.0.0.0} # Default IP to listen on
+      - SERVER_PORT=${SERVER_PORT:-3000} # Default port to listen on
+      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true} # Enable tracing by default
+      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2} # Number of worker threads
+
+      # Database connection settings
+      - DATABASE_URL=postgres://${DATABASE_USER:-dbuser}:${DATABASE_PASSWORD:-1234}@pgpool/${DATABASE_DB:-axium}
+      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20} # Max database connections
+      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5} # Min database connections
+
+      # HTTPS settings
+      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false} # Disable HTTPS by default
+      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true} # Enable HTTP/2 for HTTPS
+
+      # Certificate paths for HTTPS
+      - SERVER_HTTPS_CERT_FILE_PATH=/app/certs/cert.pem
+      - SERVER_HTTPS_KEY_FILE_PATH=/app/certs/key.pem
+
+      # Rate limiting settings
+      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5} # Default rate limit
+      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1} # Rate limit period in seconds
+
+      # Compression settings
+      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true} # Enable compression by default
+      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6} # Compression level
+
+      # JWT secret key (change this in production!)
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!} # VERY important to change this!
+
+    # Depend on the pgpool service and wait until it's healthy
+    depends_on:
+      pgpool:
+        condition: service_healthy
+
+    # Mount volumes for certificates
+    volumes:
+      - ./certs:/app/certs  # Mount local certs directory to container
+
+    # Health check settings
+    healthcheck:
+      # Test the health of the service by checking the /health endpoint
+      test: ["CMD", "curl", "-f", "http://${SERVER_IP:-0.0.0.0}:${SERVER_PORT:-3000}/health"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Timeout after 5 seconds
+      retries: 3 # Retry up to 3 times
+      start_period: 15s # Wait 15 seconds before starting checks
+
+    # Resource limits for the service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${AXIUM_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 512MB)
+          memory: ${AXIUM_MEMORY_LIMIT:-512M}
+
+  # Second instance of Axium application
+  axium2:
+    # Use the same build configuration as the first instance. Haven't found a way to bypass having to build the second container.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Use the same environment variables and other settings as the first instance
+    environment:
+      - SERVER_PORT=${SERVER2_PORT:-3001} # Use a different port
+    ports:
+      - "${SERVER2_PORT:-3001}:${SERVER2_PORT:-3001}"
+    depends_on:
+      pgpool:
+        condition: service_healthy
+    # Health check settings
+    healthcheck:
+      # Test the health of the service by checking the /health endpoint
+      test: ["CMD", "curl", "-f", "http://${SERVER2_IP:-0.0.0.0}:${SERVER2_PORT:-3001}/health"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Timeout after 5 seconds
+      retries: 3 # Retry up to 3 times
+      start_period: 15s # Wait 15 seconds before starting checks
+    # Resource limits for the service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${AXIUM_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 512MB)
+          memory: ${AXIUM_MEMORY_LIMIT:-512M}
+
+  # PostgreSQL connection pooler
+  pgpool:
+    # Use the Bitnami Pgpool-II image
+    image: bitnami/pgpool:4.6.0
+    # Map port 5432 from the container to the host machine
+    ports:
+      - "5432:5432"
+    # Environment variables for the service
+    environment:
+      - PGPOOL_BACKEND_NODES=0:db:5432,1:db2:5432
+      - PGPOOL_SR_CHECK_USER=${DATABASE_USER:-dbuser}
+      - PGPOOL_SR_CHECK_PASSWORD=${DATABASE_PASSWORD:-1234}
+      - PGPOOL_ENABLE_LOAD_BALANCING=yes
+      - PGPOOL_MAX_POOL=20
+      - PGPOOL_ADMIN_USERNAME=${PGPOOL_ADMIN_USERNAME:-pgpooladmin} # Add admin username
+      - PGPOOL_ADMIN_PASSWORD=${PGPOOL_ADMIN_PASSWORD:-adminpassword} # Add admin password
+      - PGPOOL_POSTGRES_USERNAME=${DATABASE_USER:-dbuser} # Add Postgres username
+      - PGPOOL_POSTGRES_PASSWORD=${DATABASE_PASSWORD:-1234} # Add Postgres password
+    # Depend on both PostgreSQL databases and wait until they're healthy
+    depends_on:
+      db:
+        condition: service_healthy
+      db2:
+        condition: service_healthy
+    # Health check settings
+    healthcheck:
+      # Test the health of the service using pg_isready
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432", "-U", "${DATABASE_USER:-dbuser}"]
+      interval: 10s # Check every 10 seconds
+      timeout: 5s # Timeout after 5 seconds
+      retries: 5 # Retry up to 5 times
+
+  # Primary PostgreSQL database
+  db:
+    # Use the official PostgreSQL 17 Alpine image
+    image: postgres:17-alpine
+    # Always restart the container if it fails
+    restart: always
+    ports:
+      - "5433:5432"
+    # Environment variables for the database
+    environment:
+      - POSTGRES_USER=${DATABASE_USER:-dbuser}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-1234}
+      - POSTGRES_DB=${DATABASE_DB:-axium}
+      - POSTGRESQL_REPLICATION_MODE=master
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_user
+    # Mount volumes for database data and logs
+    volumes:
+      - ./docker/db/data:/var/lib/postgresql/data
+      - ./docker/db/logs:/var/log/postgresql
+    # Health check settings for the database
+    healthcheck:
+      # Test the health of the database using pg_isready
+      test: ["CMD", "pg_isready", "-U", "${DATABASE_USER:-dbuser}"]
+      interval: 60s # Check every minute
+      timeout: 10s # Timeout after 10 seconds
+      retries: 5 # Retry up to 5 times
+      start_period: 15s # Wait 15 seconds before starting checks
+    # Resource limits for the database service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${DB_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 256MB)
+          memory: ${DB_MEMORY_LIMIT:-256M}
+
+  # Secondary PostgreSQL database for failover
+  db2:
+    # Use the official PostgreSQL 17 Alpine image
+    image: postgres:17-alpine
+    # Always restart the container if it fails
+    restart: always
+    ports:
+      - "5434:5432" # Different port for the slave database
+    # Environment variables for the database
+    environment:
+      - POSTGRES_USER=${DATABASE_USER:-dbuser}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-1234}
+      - POSTGRES_DB=${DATABASE_DB:-axium}
+      - POSTGRESQL_REPLICATION_MODE=slave
+      - POSTGRESQL_MASTER_HOST=db
+      - POSTGRESQL_MASTER_PORT_NUMBER=5432
+      - POSTGRESQL_REPLICATION_USER=repl_user
+      - POSTGRESQL_REPLICATION_PASSWORD=repl_user
+    # Mount volumes for database data and logs
+    volumes:
+      - ./docker/db2/data:/var/lib/postgresql/data
+      - ./docker/db2/logs:/var/log/postgresql
+    # Health check settings for the database
+    healthcheck:
+      # Test the health of the database using pg_isready
+      test: ["CMD", "pg_isready", "-U", "${DATABASE_USER:-dbuser}"]
+      interval: 60s # Check every minute
+      timeout: 10s # Timeout after 10 seconds
+      retries: 5 # Retry up to 5 times
+      start_period: 15s # Wait 15 seconds before starting checks
+    # Resource limits for the database service
+    deploy:
+      resources:
+        limits:
+          # Limit CPU usage (default: 0.5 cores)
+          cpus: '${DB_CPU_LIMIT:-0.5}'
+          # Limit RAM usage (default: 256MB)
+          memory: ${DB_MEMORY_LIMIT:-256M}

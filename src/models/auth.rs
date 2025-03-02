@@ -39,3 +39,17 @@ pub struct AuthError {
 
 // Implement Error trait for AuthError if needed
 // impl std::error::Error for AuthError {}
+
+
+/// Data structure for user sign-in information.
+///
+/// This includes the user's email, password, and optionally a TOTP code.
+#[derive(Deserialize, ToSchema)]
+pub struct SignInData {
+    /// User's email address.
+    pub email: String,
+    /// User's password.
+    pub password: String,
+    /// Optional TOTP code for two-factor authentication.
+    pub totp: Option<String>,
+}
