@@ -71,7 +71,7 @@ _Production monitoring made easy_
   "details": {
     "database": {"status": "ok"},
     "memory": {"available_mb": 21613, "status": "normal"},
-    "cpu_usage": {"available_percentage": "9.85", "status": "low"},
+    "cpu_usage": {"available_percentage": "9.85", "status": "low"}, 
     "disk_usage": {"used_percentage": "74.00", "status": "ok"}
   }
 }
@@ -93,7 +93,6 @@ async fn create_todo(
 
 ### **Maintenance & Compliance**  
 _Future-proof codebase management_  
-- Automated dependency updates via Dependabot  
 - Security-focused dependency tree (cargo-audit compliant)  
 - Comprehensive inline documentation:  
 ```rust
