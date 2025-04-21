@@ -6,22 +6,32 @@
 Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
 
 ## Table of Contents
-1. [🚀 Core Features](#-core-features)
-2. [🛠️ Technology Stack](#%EF%B8%8F-technology-stack)
-3. [📂 Project Structure](#-project-structure)
-4. [🌐 Default API Endpoints](#-default-api-endpoints)
-5. [📦 Installation & Usage](#-installation--usage)
-   - [🐳 Docker setup guide](/documentation/installation_docker.md)
-   - [🐧 Ubuntu setup guide](/documentation/installation_ubuntu.md)
-   - [🖥️ Windows setup guide](/documentation/installation_windows.md)
-   - [🔐 Default Accounts](#-default-accounts)
-   - [⚙️ Configuration](#%EF%B8%8F-configuration)
-7. [🤝 Contributing](#-contributing)
-   - [📝 How to Contribute](#-how-to-contribute)
-   - [🔍 Code Style](#-code-style)
-   - [🛠️ Reporting Bugs](#%EF%B8%8F-reporting-bugs)
-   - [💬 Discussion](#-discussion)
-   - [🧑‍💻 Code of Conduct](#-code-of-conduct)
+- [🦖 Axium](#-axium)
+  - [Summary](#summary)
+  - [Table of Contents](#table-of-contents)
+  - [🚀 Core Features](#-core-features)
+    - [**Effortless Deployment**](#effortless-deployment)
+    - [**Developer-First API Experience**](#developer-first-api-experience)
+    - [**Enterprise-Grade Security**](#enterprise-grade-security)
+    - [**PostgreSQL Integration**](#postgresql-integration)
+    - [**Performance Optimizations**](#performance-optimizations)
+    - [**Operational Visibility**](#operational-visibility)
+    - [**Developer Ergonomics**](#developer-ergonomics)
+    - [**Maintenance \& Compliance**](#maintenance--compliance)
+  - [🛠️ Technology stack](#️-technology-stack)
+  - [📂 Project structure](#-project-structure)
+  - [🌐 Default API endpoints](#-default-api-endpoints)
+  - [📦 Installation \& usage](#-installation--usage)
+    - [🔐 Default accounts](#-default-accounts)
+      - [Administrative password resets](#administrative-password-resets)
+    - [⚙️ Configuration](#️-configuration)
+  - [🤝 Contributing](#-contributing)
+    - [📝 How to Contribute](#-how-to-contribute)
+    - [🔍 Code Style](#-code-style)
+    - [🛠️ Reporting Bugs](#️-reporting-bugs)
+    - [💬 Discussion](#-discussion)
+    - [🧑‍💻 Code of Conduct](#-code-of-conduct)
+    - [🎉 Thanks for Contributing!](#-thanks-for-contributing)
 
 ## 🚀 Core Features
 ### **Effortless Deployment**  
@@ -167,6 +177,7 @@ Each folder has a detailed README.md file which explains the folder in more deta
 | **User routes**           |                        |               |                   |                                      |
 | GET    | `/users/all`           | ✅            | ✅                | Get all users.                       |
 | POST   | `/users/`              | ✅            | ✅                | Create a new user.                   |
+| GET    | `/users/current`          | ✅            | 🚫                | Get the current user.                    |
 | GET    | `/users/{id}`          | ✅            | ✅                | Get a user by ID.                    |
 | DELETE | `/users/{id}`          | ✅            | ✅                | Delete a user by ID.                 |
 |        |                        |               |                   |                                      |
@@ -264,8 +275,13 @@ SERVER_WORKER_THREADS=2
 # 🛢️ DATABASE CONFIGURATION
 # ==============================
 
-# PostgreSQL connection URL (format: postgres://user:password@host/database)
-DATABASE_URL="postgres://postgres:1234@localhost/database_name"
+# For running Axium standalone:
+DATABASE_URL="postgres://dbuser:1234@localhost/axium"
+
+# For docker:
+DATABASE_USER=dbuser
+DATABASE_PASSWORD=1234
+DATABASE_DB=axium
 
 # Maximum number of connections in the database pool
 DATABASE_MAX_CONNECTIONS=20
@@ -319,6 +335,29 @@ SERVER_COMPRESSION_LEVEL=6
 
 # JWT secret key.
 JWT_SECRET_KEY="Change me!"
+
+
+# ==============================
+# 🌐 CORS CONFIGURATION
+# ==============================
+
+# Allowed origin for CORS requests (comma-separated for multiple origins)
+# Example: "http://127.0.0.1:3000,http://localhost:3000"
+CORS_ALLOW_ORIGIN="*"
+
+# Allowed HTTP methods for CORS (comma-separated)
+# Example: "GET,POST,PUT,DELETE,OPTIONS"
+CORS_ALLOW_METHODS="GET,POST,PUT,DELETE,OPTIONS"
+
+# Allowed headers for CORS (comma-separated)
+# Example: "Authorization,Content-Type,Origin"
+CORS_ALLOW_HEADERS="Authorization,Content-Type,Origin"
+
+# Allow credentials (true/false)
+CORS_ALLOW_CREDENTIALS=false
+
+# Max age (in seconds) for preflight request caching
+CORS_MAX_AGE=3600
 ```
 
 ## 🤝 Contributing

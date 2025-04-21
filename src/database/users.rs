@@ -23,29 +23,67 @@ pub async fn fetch_all_users_from_db(pool: &PgPool) -> Result<Vec<UserGetRespons
 /// Safely retrieves user by allowed fields using whitelist validation
 ///
 /// # Allowed Fields
-/// - id (UUID)
-/// - email (valid email format)
-/// - username (valid username format)
+/// - id: UUID
+/// - email: valid email
+/// - username: valid username
 ///
 /// # Security
-/// - Field whitelisting prevents SQL injection
-/// - Parameterized query for value
+/// - Only whitelisted fields
+/// - No sensitive data returned
 pub async fn fetch_user_by_field_from_db(
     pool: &PgPool,
     field: &str,
     value: &str,
-) -> Result<Option<User>, sqlx::Error> {
-    let query = match field {
-        "id" => "SELECT * FROM users WHERE id = $1",
-        "email" => "SELECT * FROM users WHERE email = $1",
-        "username" => "SELECT * FROM users WHERE username = $1",
-        _ => return Err(sqlx::Error::ColumnNotFound(field.to_string())),
-    };
+) -> Result<Option<UserGetResponse>, Error> {
+    match field {
+        "id" => {
+            let uuid = value.parse::<Uuid>().map_err(|_| {
+                Error::Decode(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Invalid UUID format",
+                )))
+            })?;
 
-    sqlx::query_as::<_, User>(query)
-        .bind(value)
-        .fetch_optional(pool)
-        .await
+            sqlx::query_as!(
+                UserGetResponse,
+                r#"
+                SELECT id, username, email, role_level, tier_level, creation_date
+                FROM users
+                WHERE id = $1
+                "#,
+                uuid
+            )
+            .fetch_optional(pool)
+            .await
+        }
+        "email" => {
+            sqlx::query_as!(
+                UserGetResponse,
+                r#"
+                SELECT id, username, email, role_level, tier_level, creation_date
+                FROM users
+                WHERE email = $1
+                "#,
+                value
+            )
+            .fetch_optional(pool)
+            .await
+        }
+        "username" => {
+            sqlx::query_as!(
+                UserGetResponse,
+                r#"
+                SELECT id, username, email, role_level, tier_level, creation_date
+                FROM users
+                WHERE username = $1
+                "#,
+                value
+            )
+            .fetch_optional(pool)
+            .await
+        }
+        _ => Err(Error::ColumnNotFound(field.to_string())),
+    }
 }
 
 /// Retrieves user by email with validation
