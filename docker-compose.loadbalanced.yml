@@ -1,3 +1,5 @@
+# Make sure that the databases are exactly the same before running Axium.
+
 services:
   # HAProxy Load Balancer
   haproxy:
@@ -169,11 +171,10 @@ services:
         condition: service_healthy
     # Health check settings
     healthcheck:
-      # Test the health of the service using pg_isready
-      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "5432", "-U", "${DATABASE_USER:-dbuser}"]
-      interval: 10s # Check every 10 seconds
-      timeout: 5s # Timeout after 5 seconds
-      retries: 5 # Retry up to 5 times
+      test: ["CMD", "/opt/bitnami/scripts/pgpool/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   # Primary PostgreSQL database
   db:
