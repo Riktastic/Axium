@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use chrono::{Duration, Utc};
 use serde_json::json;
 use sqlx::postgres::PgPool;
-use tracing::{error, info};
+use tracing::{error, debug};
 use validator::Validate;
 
 use crate::utils::auth::{generate_api_key, hash_password};
@@ -47,7 +47,7 @@ pub async fn post_apikey(
         ));
     }
 
-    info!("Received request to create API key for user: {}", user.id);
+    debug!("Received request to create API key for user: {}", user.id);
 
     // Check if the user already has 5 or more API keys
     let existing_keys_count = match check_existing_api_key_count(&pool, user.id).await {
@@ -62,7 +62,7 @@ pub async fn post_apikey(
     };
 
     if existing_keys_count >= 5 {
-        info!("User {} already has 5 API keys.", user.id);
+        debug!("User {} already has 5 API keys.", user.id);
         return Err((
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "You already have 5 API keys. Please delete an existing key before creating a new one." }))
@@ -82,7 +82,7 @@ pub async fn post_apikey(
 
     match insert_api_key_into_db(&pool, key_hash, description, expiration_date, user.id).await {
         Ok(mut api_key_response) => {
-            info!("Successfully created API key for user: {}", user.id);
+            debug!("Successfully created API key for user: {}", user.id);
             // Restore generated api_key to response. It is not stored in database for security reasons.
             api_key_response.api_key = api_key;
             Ok(Json(api_key_response))

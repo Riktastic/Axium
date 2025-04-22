@@ -7,7 +7,7 @@ use axum::{
 use serde_json::json;
 use sqlx::PgPool;
 use totp_rs::{Algorithm, TOTP};
-use tracing::{info, error, warn, debug, instrument};
+use tracing::{error, warn, debug, instrument};
 
 use crate::utils::auth::{encode_jwt, verify_hash};
 use crate::database::{apikeys::fetch_active_apikeys_by_user_id_from_db, users::fetch_user_by_email_from_db};
@@ -161,7 +161,7 @@ pub async fn login(
         })?;
 
     // Log the successful sign-in.
-    info!("User signed in: {}", email);
+    debug!("User signed in: {}", email);
 
     // Prepare response headers
     let mut headers = HeaderMap::new();

@@ -12,7 +12,7 @@ use uuid::Uuid;
 use crate::models::user::*;
 use crate::database::users::{fetch_all_users_from_db, fetch_user_by_field_from_db};
 
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 // Get all users
 #[utoipa::path(
@@ -107,7 +107,7 @@ pub async fn get_current_user(
             Ok(Json(found_user))
         },
         Ok(None) => {
-            info!("User with ID {} not found in database", user.id);
+            debug!("User with ID {} not found in database", user.id);
             Err((
                 StatusCode::NOT_FOUND,
                 Json(json!({ "error": "User not found." })),
