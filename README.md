@@ -22,7 +22,8 @@ Axium is a high-performance, security-focused API boilerplate built using Rust, 
   - [📂 Project structure](#-project-structure)
   - [🌐 Default API endpoints](#-default-api-endpoints)
   - [📦 Installation \& usage](#-installation--usage)
-    - [🔐 Default accounts](#-default-accounts)
+    - [🔐 Authentication](#-authentication)
+    - [👤 Default accounts](#-default-accounts)
       - [Administrative password resets](#administrative-password-resets)
     - [⚙️ Configuration](#️-configuration)
   - [🤝 Contributing](#-contributing)
@@ -162,7 +163,7 @@ Each folder has a detailed README.md file which explains the folder in more deta
 
 | Method | Endpoint               | Auth Required | Administrator only | Description                          |
 |--------|------------------------|---------------|-------------------|--------------------------------------|
-| POST   | `/signin`              | 🚫            | 🚫                | Authenticate user and get JWT token  |
+| POST   | `/login`              | 🚫            | 🚫                | Authenticate user and get JWT token  |
 | GET    | `/protected`           | ✅            | 🚫                | Test endpoint for authenticated users |
 | GET    | `/health`              | 🚫            | 🚫                | System health check with metrics     |
 |        |                        |               |                   |                                      |
@@ -199,7 +200,29 @@ To get started with Axium, you'll need to install it on your system. We provide 
 
 These guides cover cloning the repository, setting up the environment, configuring the database, and running the application.
 
-### 🔐 Default accounts
+### 🔐 Authentication
+To authenticate, send a POST request to the `/login` endpoint with a JSON body in the following format:
+
+```json
+{
+  "email": "admin@test.com",
+  "password": "test",
+  "totp": "12234"  // Optional: only required if your account uses 2FA
+}
+```
+
+Depending on the server configuration, after a successful login:
+
+- You will receive a JWT token in the response body, and/or,
+
+- The server will set a secure, HTTP-only cookie containing your authentication token.
+
+If you receive a JWT in the response body:
+- ***Send it in the Authorization header for future requests:** `Authorization: Bearer <your_token_here>`
+- **If you receive a cookie:** Your browser will automatically send it with each request. No manual action is needed.
+
+
+### 👤 Default accounts
 
 **Warning:** These accounts should only be used for initial testing. Always change or disable them in production environments.
 
@@ -334,6 +357,24 @@ SERVER_COMPRESSION_LEVEL=6
 
 # JWT secret key.
 JWT_SECRET_KEY="Change me!"
+
+# JWT issuer
+JWT_ISSUER="your_issuer"  # Set this to your desired issuer value
+
+# JWT audience
+JWT_AUDIENCE="your_audience"  # Set this to your desired audience value
+
+# Allow authentication via HTTP cookies (true/false)
+JWT_ALLOW_COOKIE_AUTH=false
+
+# Force authentication via HTTP cookies only (true/false)
+JWT_FORCE_COOKIE_AUTH=false
+
+# Name of the cookie used to store the JWT token
+JWT_COOKIE_NAME="auth_token"
+
+# Maximum age of the JWT token in seconds
+JWT_COOKIE_MAX_AGE=604800 # 7 days in seconds
 
 
 # ==============================

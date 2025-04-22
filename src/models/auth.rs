@@ -1,4 +1,8 @@
-use axum::http::StatusCode;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
 use utoipa::ToSchema;
 use serde::{Serialize, Deserialize};
 
@@ -22,30 +26,29 @@ pub struct Claims {
 }
 
 /// Custom error type for handling authentication-related errors.
+/// Struct for authentication and authorization errors
+#[derive(Debug, Serialize)]
 pub struct AuthError {
-    /// Descriptive error message.
     pub message: String,
-    
-    /// HTTP status code to be returned with the error.
+    #[serde(skip_serializing)]
     pub status_code: StatusCode,
 }
 
-// Implement Display trait for AuthError if needed
-// impl std::fmt::Display for AuthError {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(f, "{}", self.message)
-//     }
-// }
+impl IntoResponse for AuthError {
+    fn into_response(self) -> Response {
+        let body = Json(serde_json::json!({
+            "error": self.message,
+        }));
 
-// Implement Error trait for AuthError if needed
-// impl std::error::Error for AuthError {}
-
+        (self.status_code, body).into_response()
+    }
+}
 
 /// Data structure for user sign-in information.
 ///
 /// This includes the user's email, password, and optionally a TOTP code.
 #[derive(Deserialize, ToSchema)]
-pub struct SignInData {
+pub struct LoginData {
     /// User's email address.
     pub email: String,
     /// User's password.

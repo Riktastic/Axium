@@ -53,3 +53,16 @@ pub fn get_env_bool(key: &str, default: bool) -> bool {
 pub fn get_env_u16(key: &str, default: u16) -> u16 {
     env::var(key).unwrap_or_else(|_| default.to_string()).parse().unwrap_or(default)
 }
+
+/// Retrieves the value of an environment variable as a `u64`, with a default value if not found.
+/// 
+/// # Arguments
+/// * `key` - The name of the environment variable to retrieve.
+/// * `default` - The value to return if the environment variable is not found or cannot be parsed.
+/// 
+/// # Returns
+/// * The parsed `u64` value of the environment variable if it exists and is valid.
+/// * The `default` value if the variable is missing or invalid.
+pub fn get_env_u64(key: &str, default: u64) -> u64 {
+    env::var(key).unwrap_or_else(|_| default.to_string()).parse().unwrap_or(default)
+}

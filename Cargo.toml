@@ -10,6 +10,7 @@ edition = "2021"
 [dependencies]
 # Web framework and server
 axum = { version = "0.8.1", features = ["json"] }
+axum-extra = { version = "0.10", features = ["cookie"] }
 # hyper = { version = "1.5.2", features = ["full"] }
 axum-server = { version = "0.7", features = ["tls-rustls"] }
 

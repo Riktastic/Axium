@@ -1,18 +1,18 @@
 use axum::{
     extract::State,
-    http::StatusCode,
+    http::{StatusCode, HeaderMap, HeaderValue},
     Json,
+    response::IntoResponse,
 };
-use serde::Deserialize;
 use serde_json::json;
 use sqlx::PgPool;
 use totp_rs::{Algorithm, TOTP};
-use tracing::{info, instrument};
-use utoipa::ToSchema;
+use tracing::{info, error, warn, debug, instrument};
 
 use crate::utils::auth::{encode_jwt, verify_hash};
 use crate::database::{apikeys::fetch_active_apikeys_by_user_id_from_db, users::fetch_user_by_email_from_db};
-use crate::models::auth::SignInData;
+use crate::models::auth::LoginData;
+use crate::core::config::{get_env_bool, get_env_with_default, get_env_u64};
 
 /// User sign-in endpoint.
 ///
@@ -27,9 +27,9 @@ use crate::models::auth::SignInData;
 /// - `Err((StatusCode, Json(serde_json::Value)))`: An error response if sign-in fails.
 #[utoipa::path(
     post,
-    path = "/signin",
+    path = "/login",
     tag = "auth",
-    request_body = SignInData,
+    request_body = LoginData,
     responses(
         (status = 200, description = "Successful sign-in", body = serde_json::Value),
         (status = 400, description = "Bad request", body = serde_json::Value),
@@ -38,15 +38,16 @@ use crate::models::auth::SignInData;
     )
 )]
 #[instrument(skip(pool, user_data))]
-pub async fn signin(
+pub async fn login(
     State(pool): State<PgPool>,
-    Json(user_data): Json<SignInData>,
-) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
+    Json(user_data): Json<LoginData>,
+) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     // Fetch the user from the database based on their email.
     let user = match fetch_user_by_email_from_db(&pool, &user_data.email).await {
         Ok(Some(user)) => user,
         Ok(None) | Err(_) => {
-            // If the user is not found or there's an error, return an unauthorized response.
+            // Log the error for failed login attempt
+            error!("Failed to find user with email: {}", user_data.email);
             return Err((
                 StatusCode::UNAUTHORIZED,
                 Json(json!({ "error": "Incorrect credentials." }))
@@ -58,7 +59,8 @@ pub async fn signin(
     let api_key_hashes = match fetch_active_apikeys_by_user_id_from_db(&pool, user.id).await {
         Ok(hashes) => hashes,
         Err(_) => {
-            // If there's an error fetching API keys, return an internal server error.
+            // Log the error fetching API keys
+            error!("Error fetching API keys for user: {}", user.id);
             return Err((
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": "Internal server error." }))
@@ -85,21 +87,24 @@ pub async fn signin(
         .any(|result| result);
 
     // Verify the user's password against their stored password hash.
-    let password_valid = verify_hash(&user_data.password, &user.password_hash)
-        .await
-        .map_err(|_| {
-            // If there's an error verifying the password, return an internal server error.
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Internal server error." }))
-            )
-        })?;
+    let password_valid = match verify_hash(&user_data.password, &user.password_hash).await {
+        Ok(valid) => valid,
+        Err(_) => {
+            // Log the error and return unauthorized response if password verification fails
+            error!("Password verification failed for email: {}", user_data.email);
+            return Err((
+                StatusCode::UNAUTHORIZED,
+                Json(json!({ "error": "Incorrect credentials." }))
+            ));
+        }
+    };
 
     // Determine if the credentials are valid based on API keys or password.
     let credentials_valid = any_api_key_valid || password_valid;
 
     if !credentials_valid {
-        // If credentials are not valid, return an unauthorized response.
+        // Log invalid credentials attempt
+        error!("Invalid credentials for user: {}", user_data.email);
         return Err((
             StatusCode::UNAUTHORIZED,
             Json(json!({ "error": "Incorrect credentials." }))
@@ -118,7 +123,7 @@ pub async fn signin(
                     30,
                     totp_secret.into_bytes(),
                 ).map_err(|_| {
-                    // If there's an error creating the TOTP instance, return an internal server error.
+                    error!("Error creating TOTP instance for user: {}", user.id);
                     (
                         StatusCode::INTERNAL_SERVER_ERROR,
                         Json(json!({ "error": "Internal server error." }))
@@ -127,7 +132,7 @@ pub async fn signin(
 
                 // Check if the provided TOTP code is valid.
                 if !totp.check_current(&totp_code).unwrap_or(false) {
-                    // If the TOTP code is invalid, return an unauthorized response.
+                    error!("Invalid 2FA code for user: {}", user.id);
                     return Err((
                         StatusCode::UNAUTHORIZED,
                         Json(json!({ "error": "Invalid 2FA code." }))
@@ -148,7 +153,7 @@ pub async fn signin(
     let email = user.email.clone();
     let token = encode_jwt(user.email)
         .map_err(|_| {
-            // If there's an error generating the JWT, return an internal server error.
+            error!("Error generating JWT for user: {}", user.id);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": "Internal server error." }))
@@ -158,6 +163,71 @@ pub async fn signin(
     // Log the successful sign-in.
     info!("User signed in: {}", email);
 
-    // Return the JWT token in a JSON response.
-    Ok(Json(json!({ "token": token })))
-}
+    // Prepare response headers
+    let mut headers = HeaderMap::new();
+
+    // Prevent caching of the response
+    headers.insert(
+        "Cache-Control",
+        HeaderValue::from_static("no-store"),
+    );
+
+    let allow_cookie_auth = get_env_bool("JWT_ALLOW_COOKIE_AUTH", false);
+    let force_cookie_auth = get_env_bool("JWT_FORCE_COOKIE_AUTH", false);
+    let cookie_max_age = get_env_u64("JWT_COOKIE_MAX_AGE", 604800); // default: 7 days
+    let use_https = get_env_bool("SERVER_HTTPS_ENABLED", false);
+    let cookie_name = get_env_with_default("JWT_COOKIE_NAME", "auth_token");
+    let samesite_value = get_env_with_default("JWT_COOKIE_SAMESITE", "Lax");
+    let (samesite_flag, secure_flag) = match samesite_value.to_lowercase().as_str() {
+        "none" if use_https => ("SameSite=None;", "Secure;"),  // Enforce HTTPS requirement
+        "none" => {
+            warn!("SameSite=None requires HTTPS. Falling back to Lax.");
+            ("SameSite=Lax;", "")
+        },
+        "lax" => ("SameSite=Lax;", ""),
+        "strict" => ("SameSite=Strict;", ""),
+        _ => {
+            warn!(
+                "Invalid SameSite value '{}'. Allowed: None/Lax/Strict. Using Lax.",
+                samesite_value
+            );
+            ("SameSite=Lax;", "")
+        }
+    };
+    
+    let cookie = format!(
+        "{name}={value}; HttpOnly; Path=/; Max-Age={cookie_max_age}; {secure_flag}{samesite_flag}",
+        name = cookie_name,
+        value = token,
+        secure_flag = secure_flag,
+        samesite_flag = samesite_flag,
+        cookie_max_age = cookie_max_age
+    );
+    
+    if force_cookie_auth {
+        headers.insert(
+            axum::http::header::SET_COOKIE,
+            HeaderValue::from_str(&cookie).unwrap(),
+        );
+        debug!("Setting cookie: {}", cookie);
+        return Ok((StatusCode::OK, headers, Json(json!({ "success": true }))));
+    }
+    
+    if allow_cookie_auth {
+        headers.insert(
+            axum::http::header::SET_COOKIE,
+            HeaderValue::from_str(&cookie).unwrap(),
+        );
+        debug!("Setting cookie: {}", cookie);
+    }
+    
+    headers.insert(
+        "Authorization",
+        HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
+    );
+    
+    Ok((StatusCode::OK, headers, Json(json!({
+        "access_token": token,
+        "token_type": "Bearer"
+    }))))
+} 

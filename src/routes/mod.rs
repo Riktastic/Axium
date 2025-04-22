@@ -31,6 +31,7 @@ use self::{
     health::create_health_route,
 };
 
+#[allow(dead_code)] // Not sure why, but rust-analyzer is complaining about this. While Utoipa uses it.
 struct SecurityAddon;
 impl Modify for SecurityAddon {
     fn modify(&self, openapi: &mut utoipa::openapi::OpenApi) {
@@ -41,7 +42,7 @@ impl Modify for SecurityAddon {
                 HttpBuilder::new()
                     .scheme(HttpAuthScheme::Bearer)
                     .bearer_format("JWT")
-                    .description(Some("Use JWT token obtained from /signin endpoint"))
+                    .description(Some("Use JWT token obtained from /login endpoint."))
                     .build()
             )
         );
@@ -81,7 +82,7 @@ impl Modify for SecurityAddon {
         handlers::delete_apikeys::delete_apikey_by_id,
         handlers::delete_todos::delete_todo_by_id,
         handlers::protected::protected,
-        handlers::signin::signin,
+        handlers::login::login,
     ),
     components(
         schemas(

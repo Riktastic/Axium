@@ -1,13 +1,11 @@
 // Standard library imports for working with HTTP, environment variables, and other necessary utilities
 use axum::{
     body::Body,
-    response::IntoResponse,
-    extract::{Request, Json},   // Extractor for request and JSON body
-    http::{self, Response, StatusCode}, // HTTP response and status codes
+    extract::Request,   // Extractor for request and JSON body
+    http::{Response, StatusCode}, // HTTP response and status codes
     middleware::Next,          // For adding middleware layers to the request handling pipeline
 };
 
-use serde_json::json; // For constructing JSON data
 use sqlx::{PgPool, Postgres, QueryBuilder}; // For interacting with PostgreSQL databases asynchronously
 use uuid::Uuid; // For working with UUIDs
 use tracing::instrument; // For logging
@@ -24,17 +22,8 @@ use chrono::Utc;
 use crate::database::users::fetch_user_by_email_from_db;
 
 use crate::models::auth::AuthError; // Import the AuthError struct for error handling
-use crate::utils::auth::decode_jwt;
-
-// Implement the IntoResponse trait for AuthError to allow it to be returned as a response from the handler
-impl IntoResponse for AuthError {
-    fn into_response(self) -> Response<Body> {
-        let body = Json(json!( { "error": self.message } )); // Create a JSON response body with the error message
-
-        // Return a response with the appropriate status code and error message
-        (self.status_code, body).into_response()
-    }
-}
+use crate::utils::auth::{decode_jwt, extract_token_from_header, extract_token_from_cookie};
+use crate::core::config::get_env_bool; // For fetching environment variables
 
 // New struct for caching rate limit data
 #[derive(Clone)]
@@ -44,6 +33,7 @@ struct CachedRateLimit {
 }
 
 // New struct for batched usage records
+#[allow(dead_code)]
 #[derive(Clone, Debug)]
 struct UsageRecord {
     user_id: Uuid,
@@ -59,6 +49,7 @@ lazy_static::lazy_static! {
 }
 
 // Function to start the background task for batched writes
+#[allow(dead_code)]
 pub fn start_batched_writes(pool: PgPool) {
     tokio::spawn(async move {
         let mut interval = interval(Duration::from_secs(60)); // Run every minute
@@ -93,7 +84,7 @@ async fn flush_usage_queue(pool: &PgPool) {
 
     match result {
         Ok(_) => {
-            tracing::info!("Successfully inserted {} usage records in batch.", queue.len());
+            tracing::debug!("Successfully inserted {} usage records in batch.", queue.len());
         }
         Err(e) => {
             tracing::error!("Error inserting batch usage records: {}", e);
@@ -114,46 +105,36 @@ pub async fn authorize(
     // Retrieve the database pool from request extensions (shared application state)
     let pool = req.extensions().get::<PgPool>().expect("Database pool not found in request extensions");
 
-    // Retrieve the Authorization header from the request
-    let auth_header = req.headers().get(http::header::AUTHORIZATION);
+    // Fetch environment variables for cookie-based authentication
+    let allow_cookie_auth = get_env_bool("JWT_ALLOW_COOKIE_AUTH", false);
+    let force_cookie_auth = get_env_bool("JWT_FORCE_COOKIE_AUTH", false);
 
-    // Ensure the header exists and is correctly formatted
-    let auth_header = match auth_header {
-        Some(header) => header.to_str().map_err(|_| AuthError {
-            message: "Invalid header format".to_string(),
-            status_code: StatusCode::FORBIDDEN,
-        })?,
-        None => return Err(AuthError {
-            message: "Authorization header missing.".to_string(),
-            status_code: StatusCode::FORBIDDEN,
-        }),
+    // Extract the token based on the environment configuration
+    let token_opt = match (allow_cookie_auth, force_cookie_auth) {
+        (true, true) => extract_token_from_cookie(&req),
+        (true, false) => extract_token_from_header(&req).or_else(|| extract_token_from_cookie(&req)),
+        (false, _) => extract_token_from_header(&req),
     };
 
-    // Extract the token from the Authorization header (Bearer token format)
-    let mut header = auth_header.split_whitespace();
-    let (_, token) = (header.next(), header.next());
+    // If no token is found, return an error
+    let token = token_opt.ok_or_else(|| AuthError {
+        message: "Authorization token missing.".to_string(),
+        status_code: StatusCode::UNAUTHORIZED,
+    })?;
 
-    // Decode the JWT token
-    let token_data = match decode_jwt(token.unwrap().to_string()) {
-        Ok(data) => data,
-        Err(_) => return Err(AuthError {
-            message: "Unable to decode token.".to_string(),
-            status_code: StatusCode::UNAUTHORIZED,
-        }),
-    };
+    // Decode the JWT securely
+    let token_data = decode_jwt(token)?;
 
     // Fetch the user from the database using the email from the decoded token
-    let current_user = match fetch_user_by_email_from_db(&pool, &token_data.claims.sub).await {
-        Ok(Some(user)) => user,
-        Ok(None) => return Err(AuthError {
-            message: "User not found.".to_string(),
-            status_code: StatusCode::UNAUTHORIZED,
-        }),
-        Err(_) => return Err(AuthError {
+    let current_user = fetch_user_by_email_from_db(&pool, &token_data.claims.sub).await
+        .map_err(|_| AuthError {
             message: "Unauthorized user.".to_string(),
             status_code: StatusCode::UNAUTHORIZED,
-        }),
-    };
+        })?
+        .ok_or_else(|| AuthError {
+            message: "User not found.".to_string(),
+            status_code: StatusCode::UNAUTHORIZED,
+        })?;
 
     // Check if the user's role is in the list of allowed roles
     if !allowed_roles.contains(&current_user.role_level) {
@@ -179,6 +160,7 @@ pub async fn authorize(
     Ok(next.run(req).await)
 }
 
+// Function to check rate limits for a user
 #[instrument(skip(pool))]
 async fn check_rate_limit(pool: &PgPool, user_id: Uuid, tier_level: i32) -> Result<(), AuthError> {
     // Try to get cached rate limit data
