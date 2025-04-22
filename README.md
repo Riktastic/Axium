@@ -218,7 +218,7 @@ Depending on the server configuration, after a successful login:
 - The server will set a secure, HTTP-only cookie containing your authentication token.
 
 If you receive a JWT in the response body:
-- ***Send it in the Authorization header for future requests:** `Authorization: Bearer <your_token_here>`
+- **Send it in the Authorization header for future requests:** `Authorization: Bearer <your_token_here>`
 - **If you receive a cookie:** Your browser will automatically send it with each request. No manual action is needed.
 
 
@@ -365,7 +365,7 @@ JWT_ISSUER="your_issuer"  # Set this to your desired issuer value
 JWT_AUDIENCE="your_audience"  # Set this to your desired audience value
 
 # Allow authentication via HTTP cookies (true/false)
-JWT_ALLOW_COOKIE_AUTH=false
+JWT_ALLOW_COOKIE_AUTH=true
 
 # Force authentication via HTTP cookies only (true/false)
 JWT_FORCE_COOKIE_AUTH=false
@@ -375,6 +375,9 @@ JWT_COOKIE_NAME="auth_token"
 
 # Maximum age of the JWT token in seconds
 JWT_COOKIE_MAX_AGE=604800 # 7 days in seconds
+
+# SameSite attribute for the JWT cookie (Lax, Strict, or None), SERVER_HTTPS_ENABLED must be true.
+JWT_COOKIE_SAMESITE="Lax" 
 
 
 # ==============================
@@ -394,7 +397,7 @@ CORS_ALLOW_METHODS="GET,POST,PUT,DELETE,OPTIONS"
 CORS_ALLOW_HEADERS="Authorization,Content-Type,Origin"
 
 # Allow credentials (true/false)
-CORS_ALLOW_CREDENTIALS=false
+CORS_ALLOW_CREDENTIALS=true
 
 # Max age (in seconds) for preflight request caching
 CORS_MAX_AGE=3600
