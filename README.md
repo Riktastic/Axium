@@ -2,6 +2,8 @@
 **An example API built with Rust, Axum, SQLx, and PostgreSQL.**  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> ⚠️ **Warning:** This project is under active development. Pushed changes have been tested. But it might not yet be production ready.
+
 ## Summary
 Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
 
@@ -218,7 +220,7 @@ Depending on the server configuration, after a successful login:
 - The server will set a secure, HTTP-only cookie containing your authentication token.
 
 If you receive a JWT in the response body:
-- ***Send it in the Authorization header for future requests:** `Authorization: Bearer <your_token_here>`
+- **Send it in the Authorization header for future requests:** `Authorization: Bearer <your_token_here>`
 - **If you receive a cookie:** Your browser will automatically send it with each request. No manual action is needed.
 
 
