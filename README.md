@@ -55,7 +55,7 @@ _Security by design architecture_
 - JWT authentication with Argon2id password hashing (OWASP recommended)  
 - TLS 1.3/HTTP2 via AWS-LC (FIPS 140-3 compliant cryptography)
 - Key rotation & expiration
-- Role-Based Access Control (RBAC) implementation:  
+- Custom Role-Based Access Control (RBAC) implementation, ([read more](/documentation/authentication_route_builder.md)):  
 ```rust
 .get("/all", get_all_apikeys, vec![1, 2])          // Admins and users
 ))
@@ -126,17 +126,7 @@ async fn create_todo(
 ### **Maintenance & Compliance**  
 _Future-proof codebase management_  
 - Security-focused dependency tree (cargo-audit compliant)  
-- Comprehensive inline documentation:  
-```rust
-/// JWT middleware - Validates Authorization header
-/// # Arguments
-/// * `req` - Incoming request
-/// * `next` - Next middleware layer
-/// # Security
-/// - Validates Bearer token format
-/// - Checks token expiration
-/// - Verifies cryptographic signature
-```
+- Comprehensive inline documentation
 
 ## 🛠️ Technology stack
 | Category              | Key Technologies               |
