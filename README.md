@@ -222,7 +222,7 @@ To get started with Axium, you'll need to install it on your system. We provide 
 - **Ubuntu setup**: For users on Ubuntu or other Debian-based systems, refer to the [Ubuntu setup Guide](/documentation/installation_ubuntu.md).
 - **Windows setup**: Windows users can find their setup instructions in the [Windows setup guide](/documentation/installation_windows.md).
 
-Make sure to have a PostgreSQL database and a S3 storage available. Both can be easily locally installed. We recommend [MinIO](https://min.io/) for developing the API locally 
+Make sure to have a PostgreSQL database and a S3 storage available. Both can be easily locally installed. We recommend [MinIO](https://min.io/), as the S3 storage for developing the API locally 
 
 These guides cover cloning the repository, setting up the environment, configuring the database, and running the application.
 
