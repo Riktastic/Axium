@@ -5,7 +5,7 @@
 > ⚠️ **Warning:** This project is under active development. Pushed changes have been tested. But it might not yet be production ready.
 
 ## Summary
-Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
+Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3 and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
 
 ## Table of Contents
 - [🦖 Axium](#-axium)
@@ -221,6 +221,8 @@ To get started with Axium, you'll need to install it on your system. We provide 
 - **Docker setup**: Follow the instructions in [Docker setup guide](/documentation/installation_docker.md) to run Axium using Docker Compose.
 - **Ubuntu setup**: For users on Ubuntu or other Debian-based systems, refer to the [Ubuntu setup Guide](/documentation/installation_ubuntu.md).
 - **Windows setup**: Windows users can find their setup instructions in the [Windows setup guide](/documentation/installation_windows.md).
+
+Make sure to have a PostgreSQL database and a S3 storage available. Both can be easily locally installed. We recommend [MinIO](https://min.io/) for developing the API locally 
 
 These guides cover cloning the repository, setting up the environment, configuring the database, and running the application.
 
