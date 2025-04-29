@@ -5,14 +5,15 @@ use axum::{
     response::IntoResponse,
 };
 use serde_json::json;
-use sqlx::PgPool;
 use totp_rs::{Algorithm, TOTP};
 use tracing::{error, warn, debug, instrument};
+use std::sync::Arc;
 
 use crate::utils::auth::{encode_jwt, verify_hash};
 use crate::database::{apikeys::fetch_active_apikeys_by_user_id_from_db, users::fetch_user_by_email_from_db};
 use crate::models::auth::LoginData;
 use crate::core::config::{get_env_bool, get_env_with_default, get_env_u64};
+use crate::routes::AppState;
 
 /// User sign-in endpoint.
 ///
@@ -37,13 +38,13 @@ use crate::core::config::{get_env_bool, get_env_with_default, get_env_u64};
         (status = 500, description = "Internal server error", body = serde_json::Value)
     )
 )]
-#[instrument(skip(pool, user_data))]
+#[instrument(skip(state, user_data))]
 pub async fn login(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Json(user_data): Json<LoginData>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     // Fetch the user from the database based on their email.
-    let user = match fetch_user_by_email_from_db(&pool, &user_data.email).await {
+    let user = match fetch_user_by_email_from_db(&state.database, &user_data.email).await {
         Ok(Some(user)) => user,
         Ok(None) | Err(_) => {
             // Log the error for failed login attempt
@@ -56,7 +57,7 @@ pub async fn login(
     };
 
     // Fetch active API keys for the user.
-    let api_key_hashes = match fetch_active_apikeys_by_user_id_from_db(&pool, user.id).await {
+    let api_key_hashes = match fetch_active_apikeys_by_user_id_from_db(&state.database, user.id).await {
         Ok(hashes) => hashes,
         Err(_) => {
             // Log the error fetching API keys

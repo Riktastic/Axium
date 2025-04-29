@@ -7,11 +7,15 @@ pub mod usage;
 pub mod user;
 
 use axum::Router;
-use sqlx::PgPool;
 use tower_http::trace::TraceLayer;
 use utoipa::openapi::security::{SecurityScheme, HttpBuilder, HttpAuthScheme};
 use utoipa::{Modify, OpenApi};
 use utoipa_swagger_ui::SwaggerUi;
+
+// Application state structure
+use sqlx::PgPool;
+use aws_sdk_s3::Client as S3Client;
+use std::sync::Arc;  // For thread-safe reference counting
 
 pub mod handlers {
     pub use crate::handlers::*;
@@ -30,6 +34,12 @@ use self::{
     homepage::create_homepage_route,
     health::create_health_route,
 };
+
+#[derive(Clone, Debug)]
+pub struct AppState {
+    pub database: PgPool,
+    pub storage: S3Client,
+}
 
 #[allow(dead_code)] // Not sure why, but rust-analyzer is complaining about this. While Utoipa uses it.
 struct SecurityAddon;
@@ -126,7 +136,7 @@ impl Modify for SecurityAddon {
 struct ApiDoc;
 
 /// Function to create and configure all routes
-pub fn create_routes(database_connection: PgPool) -> Router {
+pub fn create_routes(state: Arc<AppState>) -> Router<()> {
     // Create OpenAPI specification
     let openapi = ApiDoc::openapi();
 
@@ -136,15 +146,14 @@ pub fn create_routes(database_connection: PgPool) -> Router {
 
     // Combine all routes and add middleware
     Router::new()
-        .merge(create_homepage_route())
-        .merge(create_auth_routes())
+        .merge(create_homepage_route(state.clone()))
+        .merge(create_auth_routes(state.clone()))
         .merge(swagger_ui)
-        .nest("/users", create_user_routes())
-        .nest("/apikeys", create_apikey_routes())
-        .nest("/usage", create_usage_routes())
-        .nest("/todos", create_todo_routes())
-        .merge(create_health_route())
-        .layer(axum::Extension(database_connection.clone()))
-        .with_state(database_connection)
+        .nest("/users", create_user_routes(state.clone()))
+        .nest("/apikeys", create_apikey_routes(state.clone()))
+        .nest("/usage", create_usage_routes(state.clone()))
+        .nest("/todos", create_todo_routes(state.clone()))
+        .merge(create_health_route(state.clone()))
+        .with_state(state)
         .layer(TraceLayer::new_for_http())
 }

@@ -3,13 +3,15 @@ use axum::{
     Json,
     http::StatusCode,
 };
-use sqlx::postgres::PgPool;
 use uuid::Uuid;
 use serde_json::json;
 use tracing::instrument; // For logging
+use std::sync::Arc;
+
 use crate::models::todo::*;
 use crate::models::user::*;
 use crate::database::todos::{fetch_all_todos_from_db, fetch_todo_by_id_from_db};
+use crate::routes::AppState;
 
 // --- Route Handlers ---
 
@@ -27,12 +29,12 @@ use crate::database::todos::{fetch_all_todos_from_db, fetch_todo_by_id_from_db};
         (status = 500, description = "Internal server error")
     )
 )]
-#[instrument(skip(pool))]
+#[instrument(skip(state))]
 pub async fn get_all_todos(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<User>,  // Extract current user from the request extensions
 ) -> Result<Json<Vec<Todo>>, (StatusCode, Json<serde_json::Value>)> {
-    match fetch_all_todos_from_db(&pool, user.id).await {
+    match fetch_all_todos_from_db(&state.database, user.id).await {
         Ok(todos) => Ok(Json(todos)),
         Err(_err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -56,9 +58,9 @@ pub async fn get_all_todos(
         (status = 500, description = "Internal server error")
     )
 )]
-#[instrument(skip(pool))]
+#[instrument(skip(state))]
 pub async fn get_todos_by_id(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<User>,  // Extract current user from the request extensions
     Path(id): Path<String>, // Use Path extractor here
 ) -> Result<Json<Todo>, (StatusCode, Json<serde_json::Value>)> {
@@ -72,7 +74,7 @@ pub async fn get_todos_by_id(
         }
     };
 
-    match fetch_todo_by_id_from_db(&pool, uuid, user.id).await {
+    match fetch_todo_by_id_from_db(&state.database, uuid, user.id).await {
         Ok(Some(todo)) => Ok(Json(todo)),
         Ok(None) => Err((
             StatusCode::NOT_FOUND,

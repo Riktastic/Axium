@@ -3,6 +3,7 @@ use uuid::Uuid;
 use crate::models::user::*;
 use regex::Regex;
 use sqlx::Error;
+use validator::Validate;
 
 /// Retrieves all users with security considerations
 ///
@@ -13,7 +14,9 @@ use sqlx::Error;
 pub async fn fetch_all_users_from_db(pool: &PgPool) -> Result<Vec<UserGetResponse>, sqlx::Error> {
     sqlx::query_as!(
         UserGetResponse,
-        "SELECT id, username, email, role_level, tier_level, creation_date 
+        "SELECT id, username, email, role_level, tier_level, creation_date, 
+        profile_picture_url, first_name, last_name, country_code, language_code, 
+        birthday, description 
         FROM users"
     )
     .fetch_all(pool)
@@ -47,7 +50,9 @@ pub async fn fetch_user_by_field_from_db(
             sqlx::query_as!(
                 UserGetResponse,
                 r#"
-                SELECT id, username, email, role_level, tier_level, creation_date
+                SELECT id, username, email, role_level, tier_level, creation_date, 
+                       profile_picture_url, first_name, last_name, country_code, 
+                       language_code, birthday, description
                 FROM users
                 WHERE id = $1
                 "#,
@@ -60,7 +65,9 @@ pub async fn fetch_user_by_field_from_db(
             sqlx::query_as!(
                 UserGetResponse,
                 r#"
-                SELECT id, username, email, role_level, tier_level, creation_date
+                SELECT id, username, email, role_level, tier_level, creation_date, 
+                       profile_picture_url, first_name, last_name, country_code, 
+                       language_code, birthday, description
                 FROM users
                 WHERE email = $1
                 "#,
@@ -73,7 +80,9 @@ pub async fn fetch_user_by_field_from_db(
             sqlx::query_as!(
                 UserGetResponse,
                 r#"
-                SELECT id, username, email, role_level, tier_level, creation_date
+                SELECT id, username, email, role_level, tier_level, creation_date, 
+                       profile_picture_url, first_name, last_name, country_code, 
+                       language_code, birthday, description
                 FROM users
                 WHERE username = $1
                 "#,
@@ -98,7 +107,9 @@ pub async fn fetch_user_by_email_from_db(
     sqlx::query_as!(
         User,
         r#"SELECT id, username, email, password_hash, totp_secret, 
-           role_level, tier_level, creation_date
+           role_level, tier_level, creation_date, profile_picture_url, 
+           first_name, last_name, country_code, language_code, 
+           birthday, description
            FROM users WHERE email = $1"#,
         email
     )
@@ -156,7 +167,9 @@ pub async fn insert_user_into_db(
         r#"INSERT INTO users 
            (username, email, password_hash, totp_secret, role_level, tier_level, creation_date)
            VALUES ($1, $2, $3, $4, $5, $6, NOW()::timestamp)
-           RETURNING id, username, email, totp_secret, role_level, tier_level, creation_date"#,
+           RETURNING id, username, email, totp_secret, role_level, tier_level, creation_date, 
+                     first_name, last_name, country_code, language_code, birthday, description, 
+                     profile_picture_url"#,
         username,
         email,
         password_hash,
@@ -170,10 +183,177 @@ pub async fn insert_user_into_db(
     Ok(row)
 }
 
+/// Retrieves the profile picture URL for a specific user
+///
+/// # Arguments
+/// - `pool`: Database connection pool
+/// - `user_id`: The user's unique identifier
+///
+/// # Returns
+/// - `Ok(Some(String))` if user exists and has a profile picture
+/// - `Ok(None)` if user exists but has no profile picture
+/// - `Err(sqlx::Error)` on database errors
+pub async fn fetch_profile_picture_url_from_db(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<Option<String>, sqlx::Error> {
+    let result: Option<Option<String>> = sqlx::query_scalar!(
+        r#"
+        SELECT profile_picture_url 
+        FROM users 
+        WHERE id = $1
+        "#,
+        user_id
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(result.flatten())
+}
+
+
+/// Updates the profile picture URL for a user
+///
+/// # Arguments
+/// - `pool`: Database connection pool
+/// - `user_id`: The user's ID
+/// - `profile_picture_url`: The new URL or path for the profile picture
+///
+/// # Returns
+/// - `Ok(())` on success
+/// - `Err(sqlx::Error)` on failure
+pub async fn update_user_profile_picture_in_db(
+    pool: &PgPool,
+    user_id: Uuid,
+    profile_picture_url: &str,
+) -> Result<(), Error> {
+    sqlx::query!(
+        r#"
+        UPDATE users
+        SET profile_picture_url = $1
+        WHERE id = $2
+        "#,
+        profile_picture_url,
+        user_id
+    )
+    .execute(pool)
+    .await?;
+
+    Ok(())
+}
+
 /// Email validation helper function
 fn is_valid_email(email: &str) -> bool {
     let email_regex = Regex::new(
         r"^[a-z0-9_+]+([a-z0-9_.-]*[a-z0-9_+])?@[a-z0-9]+([-.][a-z0-9]+)*\.[a-z]{2,6}$"
     ).unwrap();
     email_regex.is_match(email)
+}
+
+/// Updates the specified user's profile fields in the database.
+///
+/// This function dynamically builds an `UPDATE` SQL statement using `sqlx::QueryBuilder`
+/// based on the fields present in `UserUpdateBody`. Only fields that are `Some` will be updated.
+/// Fields set to `Some(None)` will be set to `NULL` in the database, while fields set to
+/// `Some(Some(value))` will be updated to that value. Fields that are `None` are not changed.
+///
+/// The update struct is validated before attempting the update.
+///
+/// # Arguments
+///
+/// * `pool` - A reference to the PostgreSQL connection pool.
+/// * `user_id` - The UUID of the user whose profile is being updated.
+/// * `update` - A struct containing the profile fields to update. Each field is an
+///   `Option<Option<T>>`, allowing for explicit nullification or update.
+///
+/// # Returns
+///
+/// * `Ok(())` if the update was successful or if there was nothing to update.
+/// * `Err(sqlx::Error)` if the database operation fails or validation fails.
+///
+/// # Example
+///
+/// ```
+/// let update = UserUpdateBody {
+///     first_name: Some(Some("Alice".to_string())),
+///     last_name: Some(None), // Will set last_name to NULL
+///     country_code: None,    // Will not update country_code
+///     language_code: None,
+///     birthday: None,
+///     description: None,
+/// };
+/// update_user_in_db(&pool, user_id, update).await?;
+/// ```
+///
+/// # Notes
+///
+/// - If no fields are provided to update, the function returns `Ok(())` and performs no database operation.
+/// - The SQL query is constructed dynamically to update only the specified fields.
+///
+pub async fn update_user_in_db(
+    pool: &PgPool,
+    user_id: Uuid,
+    update: UserUpdateBody,
+) -> Result<(), sqlx::Error> {
+    // Validate the update struct before proceeding
+    if let Err(validation_errors) = update.validate() {
+        return Err(sqlx::Error::Protocol(format!("Validation error: {:?}", validation_errors)));
+    }
+
+    use sqlx::QueryBuilder;
+    let mut builder = QueryBuilder::new("UPDATE users SET ");
+    let mut has_updates = false;
+
+    // For Option<T> fields (cannot be explicitly set to NULL)
+    macro_rules! maybe_set_opt {
+        ($field:ident) => {
+            if let Some(ref val) = update.$field {
+                if has_updates {
+                    builder.push(", ");
+                }
+                builder.push(format!("{} = ", stringify!($field)));
+                builder.push_bind(val);
+                has_updates = true;
+            }
+        };
+    }
+
+    // For Option<Option<T>> fields (can be explicitly set to NULL)
+    macro_rules! maybe_set_optopt {
+        ($field:ident) => {
+            if let Some(ref val) = update.$field {
+                if has_updates {
+                    builder.push(", ");
+                }
+                builder.push(format!("{} = ", stringify!($field)));
+                match val {
+                    Some(inner) => { builder.push_bind(inner); },
+                    None => { builder.push("NULL"); },
+                }
+                has_updates = true;
+            }
+        };
+    }
+
+    // Use parentheses and semicolons for macro calls!
+    maybe_set_opt!(first_name);
+    maybe_set_opt!(last_name);
+    maybe_set_optopt!(country_code);
+    maybe_set_opt!(language_code);
+    maybe_set_optopt!(birthday);
+    maybe_set_opt!(description);
+    maybe_set_opt!(role_level);
+    maybe_set_opt!(tier_level);
+
+    if !has_updates {
+        return Ok(());
+    }
+
+    builder.push(" WHERE id = ");
+    builder.push_bind(user_id);
+
+    let query = builder.build();
+    query.execute(pool).await?;
+
+    Ok(())
 }

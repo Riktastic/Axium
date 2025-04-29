@@ -2,14 +2,15 @@ use axum::{extract::{Extension, State}, Json};
 use axum::http::StatusCode;
 use chrono::{Duration, Utc};
 use serde_json::json;
-use sqlx::postgres::PgPool;
 use tracing::{error, debug};
 use validator::Validate;
+use std::sync::Arc;
 
 use crate::utils::auth::{generate_api_key, hash_password};
 use crate::models::user::User;
 use crate::database::apikeys::{check_existing_api_key_count, insert_api_key_into_db};
 use crate::models::apikey::{ApiKeyInsertBody, ApiKeyInsertResponse};
+use crate::routes::AppState;
 
 // --- Route Handler ---
 
@@ -30,7 +31,7 @@ use crate::models::apikey::{ApiKeyInsertBody, ApiKeyInsertResponse};
     )
 )]
 pub async fn post_apikey(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<User>,
     Json(api_key_request): Json<ApiKeyInsertBody>
 ) -> Result<Json<ApiKeyInsertResponse>, (StatusCode, Json<serde_json::Value>)> {
@@ -50,7 +51,7 @@ pub async fn post_apikey(
     debug!("Received request to create API key for user: {}", user.id);
 
     // Check if the user already has 5 or more API keys
-    let existing_keys_count = match check_existing_api_key_count(&pool, user.id).await {
+    let existing_keys_count = match check_existing_api_key_count(&state.database, user.id).await {
         Ok(count) => count,
         Err(err) => {
             error!("Failed to check the amount of API keys for user {}: {}", user.id, err);
@@ -80,7 +81,7 @@ pub async fn post_apikey(
     let api_key = generate_api_key();
     let key_hash = hash_password(&api_key).expect("Failed to hash password.");
 
-    match insert_api_key_into_db(&pool, key_hash, description, expiration_date, user.id).await {
+    match insert_api_key_into_db(&state.database, key_hash, description, expiration_date, user.id).await {
         Ok(mut api_key_response) => {
             debug!("Successfully created API key for user: {}", user.id);
             // Restore generated api_key to response. It is not stored in database for security reasons.

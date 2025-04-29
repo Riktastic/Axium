@@ -1,9 +1,7 @@
 // Standard library imports for working with HTTP, environment variables, and other necessary utilities
 use axum::{
     body::Body,
-    extract::Request,   // Extractor for request and JSON body
-    http::{Response, StatusCode}, // HTTP response and status codes
-    middleware::Next,          // For adding middleware layers to the request handling pipeline
+    http::StatusCode, // HTTP response and status codes
 };
 
 use sqlx::{PgPool, Postgres, QueryBuilder}; // For interacting with PostgreSQL databases asynchronously
@@ -24,6 +22,7 @@ use crate::database::users::fetch_user_by_email_from_db;
 use crate::models::auth::AuthError; // Import the AuthError struct for error handling
 use crate::utils::auth::{decode_jwt, extract_token_from_header, extract_token_from_cookie};
 use crate::core::config::get_env_bool; // For fetching environment variables
+use crate::routes::AppState; // For extacting the application state from the request
 
 // New struct for caching rate limit data
 #[derive(Clone)]
@@ -98,12 +97,13 @@ async fn flush_usage_queue(pool: &PgPool) {
 // Ensures that only users with specific roles are authorized to access certain resources
 #[instrument(skip(req, next))]
 pub async fn authorize(
-    mut req: Request<Body>,
-    next: Next,
-    allowed_roles: Vec<i32>, // Accept a vector of allowed roles
-) -> Result<Response<Body>, AuthError> {
-    // Retrieve the database pool from request extensions (shared application state)
-    let pool = req.extensions().get::<PgPool>().expect("Database pool not found in request extensions");
+    allowed_roles: Arc<Vec<i32>>,
+    state: Arc<AppState>,       // App state, including the database connection
+    mut req: axum::extract::Request<Body>,
+    next: axum::middleware::Next,
+) -> Result<axum::response::Response, AuthError>
+{
+    let database = &state.database;
 
     // Fetch environment variables for cookie-based authentication
     let allow_cookie_auth = get_env_bool("JWT_ALLOW_COOKIE_AUTH", false);
@@ -126,7 +126,7 @@ pub async fn authorize(
     let token_data = decode_jwt(token)?;
 
     // Fetch the user from the database using the email from the decoded token
-    let current_user = fetch_user_by_email_from_db(&pool, &token_data.claims.sub).await
+    let current_user = fetch_user_by_email_from_db(&database, &token_data.claims.sub).await
         .map_err(|_| AuthError {
             message: "Unauthorized user.".to_string(),
             status_code: StatusCode::UNAUTHORIZED,
@@ -145,7 +145,7 @@ pub async fn authorize(
     }
 
     // Check rate limit using cached data
-    check_rate_limit(&pool, current_user.id, current_user.tier_level).await?;
+    check_rate_limit(&database, current_user.id, current_user.tier_level).await?;
 
     // Queue the usage record for batch insert instead of immediate insertion
     USAGE_QUEUE.lock().await.push(UsageRecord {
@@ -161,8 +161,8 @@ pub async fn authorize(
 }
 
 // Function to check rate limits for a user
-#[instrument(skip(pool))]
-async fn check_rate_limit(pool: &PgPool, user_id: Uuid, tier_level: i32) -> Result<(), AuthError> {
+#[instrument(skip(database))]
+async fn check_rate_limit(database: &PgPool, user_id: Uuid, tier_level: i32) -> Result<(), AuthError> {
     // Try to get cached rate limit data
     if let Some(cached) = RATE_LIMIT_CACHE.get(&(user_id, tier_level)).await {
         if cached.request_count >= cached.tier_limit {
@@ -184,7 +184,7 @@ async fn check_rate_limit(pool: &PgPool, user_id: Uuid, tier_level: i32) -> Resu
         "SELECT requests_per_day FROM tiers WHERE level = $1",
         tier_level
     )
-    .fetch_one(pool)
+    .fetch_one(database)
     .await
     .map_err(|_| AuthError {
         message: "Failed to fetch tier information".to_string(),
@@ -197,7 +197,7 @@ async fn check_rate_limit(pool: &PgPool, user_id: Uuid, tier_level: i32) -> Resu
         "SELECT COUNT(*) as count FROM usage WHERE user_id = $1 AND creation_date > NOW() - INTERVAL '24 hours'",
         user_id
     )
-    .fetch_one(pool)
+    .fetch_one(database)
     .await
     .map_err(|_| AuthError {
         message: "Failed to count user requests".to_string(),

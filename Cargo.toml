@@ -9,33 +9,39 @@ edition = "2021"
     
 [dependencies]
 # Web framework and server
-axum = { version = "0.8.1", features = ["json"] }
-axum-extra = { version = "0.10", features = ["cookie"] }
+axum = { version = "0.8.3", features = ["json", "multipart"] }
+# axum-extra = { version = "0.10", features = ["cookie"] }
 # hyper = { version = "1.5.2", features = ["full"] }
-axum-server = { version = "0.7", features = ["tls-rustls"] }
+axum-server = { version = "0.7.2", features = ["tls-rustls"] }
 
 # Database interaction
 sqlx = { version = "0.8.3", features = ["runtime-tokio-rustls", "postgres", "migrate", "uuid", "chrono"] }
-uuid = { version = "1.12.1", features = ["serde"] }
+uuid = { version = "1.16.0", features = ["serde"] }
 rand = "0.8.5"
 rand_core = "0.6.4" # 2024-2-3: SQLx 0.8.3 does not support 0.9. 
 moka = { version = "0.12.10", features = ["future"] }
 lazy_static = "1.5"
 
+# Storage interaction
+aws-config = "1.6.2"
+aws-sdk-s3 = "1.83.0"
+url = "2"
+bytes = "1.10.1"
+
 # Serialization and deserialization
-serde = { version = "1.0.217", features = ["derive"] }
-serde_json = "1.0.137"
+serde = { version = "1.0.219", features = ["derive"] }
+serde_json = "1.0.140"
 
 # Authentication and security
-jsonwebtoken = "9.3.0"
+jsonwebtoken = "9.3.1"
 argon2 = "0.5.3"
-totp-rs = { version = "5.6.0", features = ["gen_secret"] }
+totp-rs = { version = "5.7.0", features = ["gen_secret"] }
 base64 = "0.22.1"
-bcrypt = "0.17.0"
+# bcrypt = "0.17.0"
 futures = "0.3.31"
 
 # Asynchronous runtime and traits
-tokio = { version = "1.43.0", features = ["rt-multi-thread", "process", "signal"] }
+tokio = { version = "1.44.2", features = ["rt-multi-thread", "process", "signal"] }
 
 # Configuration and environment
 dotenvy = "0.15.7"
@@ -49,21 +55,25 @@ tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 
 # System information
-sysinfo = "0.33.1"
+sysinfo = "0.34.2"
 
 # Date and time handling
-chrono = { version = "0.4.39", features = ["serde"] }
+chrono = { version = "0.4.41", features = ["serde"] }
 
 # SSL / TLS
-rustls = "0.23.21"
-tokio-rustls = "0.26.1"
+rustls = "0.23.26"
+tokio-rustls = "0.26.2"
 rustls-pemfile = "2.2.0"
 
 # Input validation
 validator = { version = "0.20.0", features = ["derive"] }
 regex = "1.11.1"
-thiserror = "1.0"
+thiserror = "2.0.12"
+
+# Image handling
+webp = { version = "0.3.0" }
+image = { version = "0.25.6", features = ["jpeg", "png"] }
 
 # Documentation
 utoipa = { version = "5.3.1", features = ["axum_extras", "chrono", "uuid"] }
-utoipa-swagger-ui = { version = "9.0.0", features = ["axum"] } 
+utoipa-swagger-ui = { version = "9.0.1", features = ["axum"] } 

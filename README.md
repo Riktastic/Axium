@@ -21,7 +21,9 @@ Axium is a high-performance, security-focused API boilerplate built using Rust, 
   - [🛠️ Technology stack](#️-technology-stack)
   - [📂 Project structure](#-project-structure)
   - [🌐 Default API endpoints](#-default-api-endpoints)
+    - [**Notes:**](#notes)
   - [📦 Installation \& usage](#-installation--usage)
+  - [Integration](#integration)
     - [🔐 Authentication](#-authentication)
     - [👤 Default accounts](#-default-accounts)
       - [Administrative password resets](#administrative-password-resets)
@@ -43,11 +45,8 @@ _From zero to production in minutes_
 ### **Developer-First API Experience**  
 _Spec-driven development workflow_  
 - Auto-generated OpenAPI 3.1 specifications  
-- Interactive Swagger UI endpoint at `/docs`  
-```rust
-// Endpoint registration example
-.route("/docs", get(serve_swagger_ui))
-```
+- Interactive Swagger UI endpoint at `/docs`
+- Custom wrapper for a simpler implementation of RBAC (which extends Axum) following the DRY principle (Don't repeat yourself)
 
 ### **Enterprise-Grade Security**  
 _Security by design architecture_  
@@ -56,8 +55,7 @@ _Security by design architecture_
 - Key rotation & expiration
 - Role-Based Access Control (RBAC) implementation:  
 ```rust
-.layer(middleware::from_fn(|req, next| 
-    authorize(req, next, vec![1, 2]) // Admin+Mod roles
+.get("/all", get_all_apikeys, vec![1, 2])          // Admins and users
 ))
 ```
 
@@ -78,13 +76,34 @@ _Production monitoring made easy_
 - Docker-healthcheck compatible endpoint:  
 ```json
 {
-  "status": "degraded",
-  "details": {
-    "database": {"status": "ok"},
-    "memory": {"available_mb": 21613, "status": "normal"},
-    "cpu_usage": {"available_percentage": "9.85", "status": "low"}, 
-    "disk_usage": {"used_percentage": "74.00", "status": "ok"}
-  }
+    "details": {
+        "cpu_usage": {
+            "available_percentage": "2.48",
+            "status": "low",
+            "usage_percentage": "97.52"
+        },
+        "database": {
+            "status": "ok"
+        },
+        "disk_usage": {
+            "status": "ok",
+            "used_percentage": "85.00"
+        },
+        "important_processes": [
+            {
+                "name": "postgres",
+                "status": "running"
+            }
+        ],
+        "memory": {
+            "available_mb": 17785,
+            "status": "normal"
+        },
+        "network": {
+            "status": "ok"
+        }
+    },
+    "status": "degraded"
 }
 ```
 
@@ -148,6 +167,8 @@ axium/                              # Root project directory
 │   │
 │   ├── 📁 utils/                   # Common utilities
 │   │
+│   ├── 📁 wrappers/                   # Wrapper implementations
+│   │
 │   └── main.rs                     # Application entry point
 │
 ├── 📄 .env                         # Environment configuration
@@ -161,35 +182,46 @@ Each folder has a detailed README.md file which explains the folder in more deta
 
 ## 🌐 Default API endpoints
 
-| Method | Endpoint               | Auth Required | Administrator only | Description                          |
-|--------|------------------------|---------------|-------------------|--------------------------------------|
-| POST   | `/login`              | 🚫            | 🚫                | Authenticate user and get JWT token  |
-| GET    | `/protected`           | ✅            | 🚫                | Test endpoint for authenticated users |
-| GET    | `/health`              | 🚫            | 🚫                | System health check with metrics     |
-|        |                        |               |                   |                                      |
-| **Apikey routes**         |                        |               |                   |                                      |
-| GET    | `/apikeys/all`         | ✅            | 🚫                | Get all apikeys of the current user. |
-| POST   | `/apikeys/`            | ✅            | 🚫                | Create a new apikey.                 |
-| GET    | `/apikeys/{id}`        | ✅            | 🚫                | Get an apikey by ID.                 |
-| DELETE | `/apikeys/{id}`        | ✅            | 🚫                | Delete an apikey by ID.              |
-| POST   | `/apikeys/rotate/{id}` | ✅            | 🚫                | Rotates an API key, disables the old one (grace period 24 hours), returns a new one. |
-|        |                        |               |                   |                                      |
-| **User routes**           |                        |               |                   |                                      |
-| GET    | `/users/all`           | ✅            | ✅                | Get all users.                       |
-| POST   | `/users/`              | ✅            | ✅                | Create a new user.                   |
-| GET    | `/users/current`          | ✅            | 🚫                | Get the current user.                    |
-| GET    | `/users/{id}`          | ✅            | ✅                | Get a user by ID.                    |
-| DELETE | `/users/{id}`          | ✅            | ✅                | Delete a user by ID.                 |
-|        |                        |               |                   |                                      |
-| **Usage routes**           |                        |               |                   |                                      |
-| GET    | `/usage/lastweek`           | ✅            | 🚫                | Amount of API calls withim the last week of the current user.   |
-| GET   | `/usage/lastday`              | ✅            | 🚫                | Amount of API calls within last day of the current user.                   |
-| | | | | |
-| **Todo routes**           |                        |               |                   |                                      |
-| GET    | `/todos/all`           | ✅            | 🚫                | Get all todos of the current user.   |
-| POST   | `/todos/`              | ✅            | 🚫                | Create a new todo.                   |
-| GET    | `/todos/{id}`          | ✅            | 🚫                | Get a todo by ID.                    |
-| DELETE | `/todos/{id}`          | ✅            | 🚫                | Delete a todo by ID.                 |
+| Method | Endpoint                        | Auth Required | Administrator only | Description                                                      |
+|--------|---------------------------------|---------------|-------------------|------------------------------------------------------------------|
+| POST   | `/login`                        | 🚫            | 🚫                | Authenticate user and get JWT token                              |
+| GET    | `/protected`                    | ✅            | 🚫                | Test endpoint for authenticated users                            |
+| GET    | `/health`                       | 🚫            | 🚫                | System health check with metrics                                 |
+|        |                                 |               |                   |                                                                  |
+| **Apikey routes**                        |               |                   |                                                                  |
+| GET    | `/apikeys/all`                  | ✅            | 🚫                | Get all apikeys of the current user.                             |
+| POST   | `/apikeys/`                     | ✅            | 🚫                | Create a new apikey.                                             |
+| GET    | `/apikeys/{id}`                 | ✅            | 🚫                | Get an apikey by ID.                                             |
+| DELETE | `/apikeys/{id}`                 | ✅            | 🚫                | Delete an apikey by ID.                                          |
+| POST   | `/apikeys/rotate/{id}`          | ✅            | 🚫                | Rotates an API key, disables the old one (grace period 24 hours), returns a new one. |
+|        |                                 |               |                   |                                                                  |
+| **User routes**                          |               |                   |                                                                  |
+| GET    | `/users/all`                    | ✅            | ✅                | Get all users.                                                   |
+| POST   | `/users/`                       | ✅            | ✅                | Create a new user.                                               |
+| POST   | `/users/{id}/profile-picture`   | ✅            | 🚫/✅ (see below)  | Upload or update a user's profile picture. Will be converted to WebP, cropped to 300x300, max 10 MB, Admins can upload for others. |
+| PATCH  | `/users/{id}`                   | ✅            | 🚫/✅ (see below)  | Update user profile fields (self or admin for others).           |
+| GET    | `/users/current`                | ✅            | 🚫                | Get the current user.                                            |
+| GET    | `/users/{id}`                   | ✅            | ✅                | Get a user by ID.                                                |
+| DELETE | `/users/{id}`                   | ✅            | ✅                | Delete a user by ID.                                             |
+|        |                                 |               |                   |                                                                  |
+| **Usage routes**                         |               |                   |                                                                  |
+| GET    | `/usage/lastweek`               | ✅            | 🚫                | Amount of API calls within the last week of the current user.    |
+| GET    | `/usage/lastday`                | ✅            | 🚫                | Amount of API calls within last day of the current user.         |
+|        |                                 |               |                   |                                                                  |
+| **Todo routes**                          |               |                   |                                                                  |
+| GET    | `/todos/all`                    | ✅            | 🚫                | Get all todos of the current user.                               |
+| POST   | `/todos/`                       | ✅            | 🚫                | Create a new todo.                                               |
+| GET    | `/todos/{id}`                   | ✅            | 🚫                | Get a todo by ID.                                                |
+| DELETE | `/todos/{id}`                   | ✅            | 🚫                | Delete a todo by ID.                                             |
+
+---
+
+### **Notes:**
+- **POST `/users/{id}/profile-picture`** and **PATCH `/users/{id}`**:  
+  - Regular users can update their own profile or profile picture.
+  - Admins can update or upload for any user.
+  - Marked as "🚫/✅ (see below)" to indicate both self and admin access.
+- If you want to clarify this further, you can add a footnote or a new column for "Self or Admin".
 
 ## 📦 Installation & usage
 To get started with Axium, you'll need to install it on your system. We provide detailed installation guides for different environments:
@@ -199,6 +231,13 @@ To get started with Axium, you'll need to install it on your system. We provide 
 - **Windows setup**: Windows users can find their setup instructions in the [Windows setup guide](/documentation/installation_windows.md).
 
 These guides cover cloning the repository, setting up the environment, configuring the database, and running the application.
+
+## Integration
+You can easily integrate Axium with your applications. Here is a detailed guide of integrating the authentication process in SolidJS:
+- [SolidJS](/documentation/integration_solidjs.md).
+
+We might add some more examples in the future. The SolidJS-example can be easily adapted for other JavaScript/TypeScript frameworks.
+
 
 ### 🔐 Authentication
 To authenticate, send a POST request to the `/login` endpoint with a JSON body in the following format:
@@ -310,6 +349,26 @@ DATABASE_MAX_CONNECTIONS=20
 
 # Minimum number of connections in the database pool
 DATABASE_MIN_CONNECTIONS=5
+
+
+# ==============================
+# ☁️ STORAGE (S3/MINIO) CONFIGURATION
+# ==============================
+
+# Endpoint (e.g., http://127.0.0.1:9000)
+STORAGE_ENDPOINT="http://127.0.0.1:9000"
+
+# Region (e.g., us-east-1)
+STORAGE_REGION="us-east-1"
+
+# Access key
+STORAGE_ACCESS_KEY="minioadmin"
+
+# Secret key
+STORAGE_SECRET_KEY="minioadmin"
+
+# Bucket name for storing profile pictures. ! Make sure that this bucket has been created.
+STORAGE_BUCKET_PROFILE_PICTURES="profile-pictures"
 
 
 # ==============================

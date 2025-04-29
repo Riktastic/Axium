@@ -10,20 +10,34 @@ use tower_http::cors::{CorsLayer, AllowCredentials};
 // Local crate imports for database connection and configuration
 use crate::database::connect::connect_to_database;  // Function to connect to the database
 use crate::database::connect::run_database_migrations;  // Function to run database migrations
+use crate::storage::connect::connect_to_storage;  // Function to connect to storage
 use crate::config;  // Environment configuration helper
+use crate::routes::create_routes;  // Function to create application routes
 
 use std::time::Duration;
 
+use crate::routes::AppState;  // Application state structure
+use std::sync::Arc;  // For thread-safe reference counting
+
 /// Function to create and configure the Axum server.
-pub async fn create_server() -> Router {
+pub async fn create_server() -> Router<()> {
     // === Database Setup ===
-    let db = connect_to_database().await
+    let database = connect_to_database().await
         .expect("❌  Failed to connect to database.");
-    run_database_migrations(&db).await
+    println!("✔️   Connected to the database.");
+
+    run_database_migrations(&database).await
         .expect("❌  Failed to run database migrations.");
 
+    // === Storage Setup ===
+    let storage = connect_to_storage().await
+        .expect("❌  Failed to connect to storage.");
+    println!("✔️   Connected to storage.");
+
+    let shared_state = Arc::new(AppState { database: database, storage: storage });
+
     // === Application Routes ===
-    let mut app = crate::routes::create_routes(db);
+    let mut app = create_routes(shared_state);
 
     // === Tracing Middleware ===
     if config::get_env_bool("SERVER_TRACE_ENABLED", true) {

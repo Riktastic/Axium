@@ -11,6 +11,7 @@ pub mod homepage;
 pub mod post_apikeys;
 pub mod post_todos;
 pub mod post_users;
+pub mod patch_users;
 pub mod protected;
 pub mod rotate_apikeys;
 pub mod login;

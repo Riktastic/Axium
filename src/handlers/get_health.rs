@@ -4,12 +4,13 @@ use axum::{
     extract::State
 };
 use serde_json::json;
-use sqlx::PgPool;
 use sysinfo::{System, RefreshKind, Disks};
 use tokio::{task, join};
 use std::sync::{Arc, Mutex};
 use tracing::instrument; // For logging
+use sqlx::PgPool; // Import PgPool for database connection
 use crate::models::health::HealthResponse;
+use crate::routes::AppState;
 
 // Health check endpoint
 #[utoipa::path(
@@ -21,8 +22,8 @@ use crate::models::health::HealthResponse;
         (status = 500, description = "Internal server error")
     )
 )]
-#[instrument(skip(database_connection))]
-pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoResponse {
+#[instrument(skip(state))]
+pub async fn get_health(State(state): State<Arc<AppState>>) -> impl IntoResponse {
     // Use Arc and Mutex to allow sharing System between tasks
     let system = Arc::new(Mutex::new(System::new_with_specifics(RefreshKind::everything())));
 
@@ -51,10 +52,10 @@ pub async fn get_health(State(database_connection): State<PgPool>) -> impl IntoR
             let system = Arc::clone(&system);
             move || {
                 let mut system = system.lock().unwrap();  // Lock the mutex and get a mutable reference
-                check_processes(&mut system, &["postgres", "Code"])  // Pass the mutable reference
+                check_processes(&mut system, &["postgres", "minio"])  // Pass the mutable reference
             }
         }),
-        check_database_connection(&database_connection), // Async function
+        check_database_connection(&state.database), // Async function
         task::spawn_blocking(check_network_connection) // Blocking, okay in spawn_blocking
     );
 
@@ -192,7 +193,7 @@ fn check_processes(system: &mut System, processes: &[&str]) -> Result<Vec<serde_
         let adjusted_name = if cfg!(target_os = "windows") {
             match name {
                 "postgres" => "postgres.exe",  // Postgres on Windows
-                "Code" => "Code.exe",          // Visual Studio Code on Windows
+                "minio" => "minio.exe",          // Visual Studio Code on Windows
                 _ => name,                     // For other platforms, use the name as is
             }
         } else {

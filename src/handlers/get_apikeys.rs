@@ -3,15 +3,16 @@ use axum::{
     Json,
     http::StatusCode
 };
-use sqlx::postgres::PgPool;
 use uuid::Uuid;
 use serde_json::json;
 use tracing::instrument; // For logging
+use std::sync::Arc;
 use crate::models::apikey::*;
 use crate::models::user::*;
 use crate::models::documentation::ErrorResponse;
 use crate::models::apikey::ApiKeyResponse;
 use crate::database::apikeys::{fetch_all_apikeys_from_db, fetch_apikey_by_id_from_db};
+use crate::routes::AppState;
 
 // --- Route Handlers ---
 
@@ -32,12 +33,12 @@ use crate::database::apikeys::{fetch_all_apikeys_from_db, fetch_apikey_by_id_fro
         ("user_id" = Uuid, Path, description = "User ID")
     )
 )]
-#[instrument(skip(pool))]
+#[instrument(skip(state))]
 pub async fn get_all_apikeys(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<User>,  // Extract current user from the request extensions
 ) -> Result<Json<Vec<ApiKeyResponse>>, (StatusCode, Json<serde_json::Value>)> {
-    match fetch_all_apikeys_from_db(&pool, user.id).await {
+    match fetch_all_apikeys_from_db(&state.database, user.id).await {
         Ok(apikeys) => Ok(Json(apikeys)), // Return all API keys as JSON
         Err(_err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -62,9 +63,9 @@ pub async fn get_all_apikeys(
         ("user_id" = Uuid, Path, description = "User ID")
     )
 )]
-#[instrument(skip(pool))]
+#[instrument(skip(state))]
 pub async fn get_apikeys_by_id(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<User>,  // Extract current user from the request extensions
     Path(id): Path<String>, // Use Path extractor here
 ) -> Result<Json<ApiKeyByIDResponse>, (StatusCode, Json<serde_json::Value>)> {
@@ -73,7 +74,7 @@ pub async fn get_apikeys_by_id(
         Err(_) => return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Invalid UUID format." })))),
     };
 
-    match fetch_apikey_by_id_from_db(&pool, uuid, user.id).await {
+    match fetch_apikey_by_id_from_db(&state.database, uuid, user.id).await {
         Ok(Some(apikey)) => Ok(Json(apikey)), // Return the API key as JSON if found
         Ok(None) => Err((
             StatusCode::NOT_FOUND,

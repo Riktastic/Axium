@@ -1,19 +1,15 @@
-use axum::{
-    Router,
-    routing::get,
-    middleware::from_fn,
-};
-use sqlx::PgPool;
+use axum::Router;
+use crate::routes::AppState;
+use std::sync::Arc;
 
-use crate::middlewares::auth::authorize;
 use crate::handlers::get_usage::{get_usage_last_day, get_usage_last_week};
+use crate::wrappers::authentication_route_builder::AuthenticatedRouteBuilder;
 
-pub fn create_usage_routes() -> Router<PgPool> {
-    Router::new()
-        .route("/lastday", get(get_usage_last_day).layer(from_fn(|req, next| {
-            let allowed_roles = vec![1,2];
-            authorize(req, next, allowed_roles)})))
-        .route("/lastweek", get(get_usage_last_week).layer(from_fn(|req, next| {
-            let allowed_roles = vec![1,2];
-            authorize(req, next, allowed_roles)})))
+pub fn create_usage_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+    AuthenticatedRouteBuilder::new(state)
+        // Route for getting the usage from the last day
+        .get("/lastday", get_usage_last_day, vec![1, 2])
+        // Route for getting the usage from the last week
+        .get("/lastweek", get_usage_last_week, vec![1, 2])
+        .build()
 }

@@ -2,15 +2,16 @@ use axum::{extract::{Extension, Path, State}, Json};
 use axum::http::StatusCode;
 use chrono::{Duration, NaiveDate, Utc};
 use serde_json::json;
-use sqlx::postgres::PgPool;
 use tracing::instrument;
 use uuid::Uuid;
 use validator::Validate;
+use std::sync::Arc;
 
 use crate::utils::auth::{generate_api_key, hash_password};
 use crate::models::user::User;
 use crate::database::apikeys::{fetch_existing_apikey, insert_api_key_into_db, disable_apikey_in_db};
 use crate::models::apikey::{ApiKeyRotateBody, ApiKeyRotateResponse, ApiKeyRotateResponseInfo};
+use crate::routes::AppState;
 
 #[utoipa::path(
     post,
@@ -30,9 +31,9 @@ use crate::models::apikey::{ApiKeyRotateBody, ApiKeyRotateResponse, ApiKeyRotate
         ("id" = String, Path, description = "API key identifier")
     )
 )]
-#[instrument(skip(pool, user, apikeyrotatebody))]
+#[instrument(skip(state, user, apikeyrotatebody))]
 pub async fn rotate_apikey(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<User>,
     Path(id): Path<String>,
     Json(apikeyrotatebody): Json<ApiKeyRotateBody>
@@ -57,7 +58,7 @@ pub async fn rotate_apikey(
     };
 
     // Verify ownership of the old API key
-    let existing_key = fetch_existing_apikey(&pool, user.id, uuid).await.map_err(|e| {
+    let existing_key = fetch_existing_apikey(&state.database, user.id, uuid).await.map_err(|e| {
         tracing::error!("Database error: {}", e);
         (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Internal server error" })))
     })?.ok_or_else(|| (StatusCode::NOT_FOUND, Json(json!({ "error": "API key not found or already disabled" }))))?;
@@ -86,18 +87,18 @@ pub async fn rotate_apikey(
         format!("Rotated from key {} - {}", existing_key.id, Utc::now().format("%Y-%m-%d"))
     );
 
-    let new_key = insert_api_key_into_db(&pool, key_hash, description, expiration_date, user.id).await.map_err(|e| {
+    let new_key = insert_api_key_into_db(&state.database, key_hash, description, expiration_date, user.id).await.map_err(|e| {
         tracing::error!("Database error: {}", e);
         (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Internal server error" })))
     })?;
 
     // Attempt to disable old key
-    let disable_result = match disable_apikey_in_db(&pool, uuid, user.id).await {
+    let disable_result = match disable_apikey_in_db(&state.database, uuid, user.id).await {
         Ok(res) => res,
         Err(e) => {
             tracing::error!("Database error: {}", e);
             // Rollback: Disable the newly created key
-            let _ = disable_apikey_in_db(&pool, new_key.id, user.id).await;
+            let _ = disable_apikey_in_db(&state.database, new_key.id, user.id).await;
             return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Internal server error" }))));
         }
     };
@@ -105,7 +106,7 @@ pub async fn rotate_apikey(
     // Verify old key was actually disabled
     if disable_result == 0 {
         // Rollback: Disable new key
-        let _ = disable_apikey_in_db(&pool, new_key.id, user.id).await;
+        let _ = disable_apikey_in_db(&state.database, new_key.id, user.id).await;
         return Err((
             StatusCode::NOT_FOUND,
             Json(json!({ "error": "Old API key not found or already disabled" }))

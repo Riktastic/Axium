@@ -4,12 +4,14 @@ use axum::{
 
     http::StatusCode,
 };
-use sqlx::postgres::PgPool;
 use uuid::Uuid;
 use serde_json::json;
 use tracing::instrument; // For logging
+use std::sync::Arc;
+
 use crate::models::documentation::{ErrorResponse, SuccessResponse};
 use crate::database::users::delete_user_from_db;
+use crate::routes::AppState;
 
 // --- Route Handler ---
 
@@ -32,9 +34,9 @@ use crate::database::users::delete_user_from_db;
         ("id" = Uuid, Path, description = "User ID")
     )
 )]
-#[instrument(skip(pool))]
+#[instrument(skip(state))]
 pub async fn delete_user_by_id(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Path(id): Path<String>, // Use Path extractor here
 ) -> Result<(StatusCode, Json<serde_json::Value>), (StatusCode, Json<serde_json::Value>)> {
     let uuid = match Uuid::parse_str(&id) {
@@ -47,7 +49,7 @@ pub async fn delete_user_by_id(
         }
     };
 
-    match delete_user_from_db(&pool, uuid).await {
+    match delete_user_from_db(&state.database, uuid).await {
         Ok(rows_affected) => {
             if rows_affected == 0 {
                 Err((

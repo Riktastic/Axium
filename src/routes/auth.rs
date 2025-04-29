@@ -1,19 +1,13 @@
-use axum::{
-    Router,
-    routing::post,
-    routing::get,
-};
-use sqlx::PgPool;
+use axum::Router;
+use crate::routes::AppState;
+use std::sync::Arc;
 
 use crate::handlers::{login::login, protected::protected};
-use crate::middlewares::auth::authorize;
-use axum::middleware::from_fn;
+use crate::wrappers::authentication_route_builder::AuthenticatedRouteBuilder;
 
-pub fn create_auth_routes() -> Router<PgPool> {
-    Router::new()
-        .route("/login", post(login))
-        .route("/protected", get(protected).layer(from_fn(|req,  next| {
-            let allowed_roles = vec![1, 2];
-            authorize(req, next, allowed_roles)
-        })))
+pub fn create_auth_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+    AuthenticatedRouteBuilder::new(state)
+        .unauthenticated_post("/login", login)
+        .get("/protected", protected, vec![1, 2])
+        .build()
 }

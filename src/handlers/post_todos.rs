@@ -2,14 +2,15 @@ use axum::{extract::{Extension, State}, Json};
 use axum::http::StatusCode;
 use serde::Deserialize;
 use serde_json::json;
-use sqlx::postgres::PgPool;
 use tracing::instrument;
 use utoipa::ToSchema;
 use validator::Validate;
+use std::sync::Arc;
 
 use crate::models::todo::Todo;
 use crate::models::user::User;
 use crate::database::todos::insert_todo_into_db;
+use crate::routes::AppState;
 
 // Define the request body structure
 #[derive(Deserialize, Validate, ToSchema)]
@@ -38,9 +39,9 @@ pub struct TodoBody {
         (status = 500, description = "Internal server error", body = String)
     )
 )]
-#[instrument(skip(pool, user, todo))]
+#[instrument(skip(state, user, todo))]
 pub async fn post_todo(
-    State(pool): State<PgPool>,
+    State(state): State<Arc<AppState>>,
     Extension(user): Extension<User>,
     Json(todo): Json<TodoBody>
 ) -> Result<Json<Todo>, (StatusCode, Json<serde_json::Value>)> {
@@ -57,7 +58,7 @@ pub async fn post_todo(
         ));
     }
 
-    match insert_todo_into_db(&pool, todo.task, todo.description, user.id).await {
+    match insert_todo_into_db(&state.database, todo.task, todo.description, user.id).await {
         Ok(new_todo) => Ok(Json(new_todo)),
         Err(_err) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
