@@ -1,0 +1,718 @@
+{
+  "name": "Axium",
+  "version": "1",
+  "items": [
+    {
+      "type": "http",
+      "name": "Health",
+      "filename": "Health.bru",
+      "seq": 3,
+      "request": {
+        "url": "{{base_url}}/health",
+        "method": "GET",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "none",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Login",
+      "filename": "Login.bru",
+      "seq": 1,
+      "request": {
+        "url": "{{base_url}}/login",
+        "method": "POST",
+        "headers": [],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "{\n  \"email\":\"admin@test.com\",\n  \"password\":\"test\",\n  \"totp\":\"12234\"\n}",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "http",
+      "name": "Protected",
+      "filename": "Protected.bru",
+      "seq": 4,
+      "request": {
+        "url": "{{base_url}}/protected",
+        "method": "GET",
+        "headers": [
+          {
+            "name": "Authorization",
+            "value": "Bearer {{token}}",
+            "enabled": true
+          }
+        ],
+        "params": [],
+        "body": {
+          "mode": "json",
+          "json": "",
+          "formUrlEncoded": [],
+          "multipartForm": [],
+          "file": []
+        },
+        "script": {},
+        "vars": {},
+        "assertions": [],
+        "tests": "",
+        "docs": "",
+        "auth": {
+          "mode": "none"
+        }
+      }
+    },
+    {
+      "type": "folder",
+      "name": "To do's",
+      "filename": "To do's",
+      "root": {
+        "request": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{token}}",
+              "enabled": true,
+              "uid": "PbYYtzcV7HPey8lideJZT"
+            }
+          ]
+        },
+        "meta": {
+          "name": "To do's"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Delete by ID",
+          "filename": "Delete by ID.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{base_url}}/todos/da340dc6-d8f1-4ef9-8dad-179d371c6594",
+            "method": "DELETE",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get all",
+          "filename": "Get all.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{base_url}}/todos/all",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get by ID",
+          "filename": "Get by ID.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{base_url}}/todos/b5ae8437-8a53-4751-8d7d-fe02b4c4950a",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Post new",
+          "filename": "Post new.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{base_url}}/todos/new",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"task\": \"Finish Rust project\",\n  \"description\": \"Complete the API endpoints for the todo app\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Usage",
+      "filename": "Usage",
+      "root": {
+        "request": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{token}}",
+              "enabled": true,
+              "uid": "Q57BkXd2jCtXCR02jDYhx"
+            }
+          ]
+        },
+        "meta": {
+          "name": "Usage"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Get usage last 24 hours",
+          "filename": "Get usage last 24 hours.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{base_url}}/usage/lastday",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get usage last 7 days",
+          "filename": "Get usage last 7 days.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{base_url}}/usage/lastweek",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "API keys",
+      "filename": "API keys",
+      "root": {
+        "request": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{token}}",
+              "enabled": true,
+              "uid": "eKwCFJmYPqnyZlS9LOfBu"
+            }
+          ]
+        },
+        "meta": {
+          "name": "API keys"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Delete by ID",
+          "filename": "Delete by ID.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{base_url}}/apikeys/699f6387-e807-4e7e-a881-7cb4405f520a",
+            "method": "DELETE",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get all",
+          "filename": "Get all.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{base_url}}/apikeys/all",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get by ID",
+          "filename": "Get by ID.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{base_url}}/apikeys/1",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Post new",
+          "filename": "Post new.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{base_url}}/apikeys/new",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"description\": \"API key for accessing user data.\",\n  \"expiration_date\": \"2025-12-31\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Rotate ID",
+          "filename": "Rotate ID.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{base_url}}/apikeys/rotate/4f4de49e-6a0f-4f02-b0c5-3822522312ed",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"description\": \"API key for accessing user data.\",\n  \"expiration_date\": \"2025-12-31\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Users",
+      "filename": "Users",
+      "root": {
+        "request": {
+          "headers": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{token}}",
+              "enabled": true,
+              "uid": "UCaCyecCB79b5CgGUc36X"
+            }
+          ]
+        },
+        "meta": {
+          "name": "Users"
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Delete by ID",
+          "filename": "Delete by ID.bru",
+          "seq": 4,
+          "request": {
+            "url": "{{base_url}}/users/e0391543-071d-4e91-be20-22a232401ab9",
+            "method": "DELETE",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get all",
+          "filename": "Get all.bru",
+          "seq": 1,
+          "request": {
+            "url": "{{base_url}}/users/all",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get by ID",
+          "filename": "Get by ID.bru",
+          "seq": 2,
+          "request": {
+            "url": "{{base_url}}/users/7a6c6e51-f2ba-41f0-a723-613804503f78",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get current",
+          "filename": "Get current.bru",
+          "seq": 5,
+          "request": {
+            "url": "{{base_url}}/users/current",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Post new",
+          "filename": "Post new.bru",
+          "seq": 3,
+          "request": {
+            "url": "{{base_url}}/users/new",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"username\": \"MyNewUser\",\n  \"email\": \"MyNewUser@test.com\",\n  \"password\": \"MyNewUser1@#\",\n  \"totp\": \"true\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Post profile picture",
+          "filename": "Post profile picture.bru",
+          "seq": 6,
+          "request": {
+            "url": "{{base_url}}/users/current/profile-picture",
+            "method": "POST",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "multipartForm",
+              "json": "{\n  \"username\": \"MyNewUser\",\n  \"email\": \"MyNewUser@test.com\",\n  \"password\": \"MyNewUser1@#\",\n  \"totp\": \"true\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [
+                {
+                  "type": "file",
+                  "name": "profile_picture",
+                  "value": [
+                    "C:\\Users\\Rik\\Downloads\\author.png"
+                  ],
+                  "enabled": true
+                }
+              ],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update/patch user",
+          "filename": "Update-patch user.bru",
+          "seq": 7,
+          "request": {
+            "url": "{{base_url}}/users/current",
+            "method": "PATCH",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"first_name\": \"NewFirstName\",\n  \"last_name\": \"NewLastName\",\n  \"country_code\": \"US\",\n  \"language_code\": \"en-US\",\n  \"birthday\": \"1990-01-01\",\n  \"description\": \"Updated bio text\",\n  \"role_level\": 2,\n  \"tier_level\": 1\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "inherit"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "activeEnvironmentUid": "F5bH4v5tbFjj3Y2tAehF4",
+  "environments": [
+    {
+      "variables": [
+        {
+          "name": "base_url",
+          "value": "http://127.0.0.1:8000",
+          "enabled": true,
+          "secret": false,
+          "type": "text"
+        },
+        {
+          "name": "token",
+          "value": "",
+          "enabled": true,
+          "secret": true,
+          "type": "text"
+        }
+      ],
+      "name": "Default"
+    }
+  ],
+  "root": {
+    "request": {
+      "vars": {
+        "req": [
+          {
+            "name": "base_url",
+            "value": "http://127.0.0.1:8000",
+            "enabled": true,
+            "local": false,
+            "uid": "9zUx9VtCi5jLPPxauknym"
+          },
+          {
+            "name": "token",
+            "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJhZG1pbkB0ZXN0LmNvbSIsImlhdCI6MTc0NTI1Nzc3NywiZXhwIjoxNzQ1MzQ0MTc3LCJpc3MiOiJ5b3VyX2lzc3VlciIsImF1ZCI6InlvdXJfYXVkaWVuY2UifQ.CaWP7FB3m84Y4OcTpvVGY2WsGupTpux-H6iQDUj1spY",
+            "enabled": true,
+            "local": false,
+            "uid": "pqbyx4lspx5ITIYqViYW0"
+          }
+        ]
+      }
+    }
+  },
+  "brunoConfig": {
+    "version": "1",
+    "name": "Axium",
+    "type": "collection",
+    "ignore": [
+      "node_modules",
+      ".git"
+    ],
+    "size": 0.004193305969238281,
+    "filesCount": 27
+  }
+}

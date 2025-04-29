@@ -124,6 +124,8 @@ pub struct UserInsertResponse {
 
 /// Request body for user updates
 #[derive(Debug, Deserialize, Serialize, Validate, ToSchema)]
+#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase")] 
 pub struct UserUpdateBody {
     #[validate(length(min = 1, max = 50))]
     pub first_name: Option<String>,

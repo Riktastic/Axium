@@ -14,3 +14,5 @@ pub mod auth;
 pub mod health;
 /// Module for the health endpoint related models.
 pub mod usage;
+/// Module for errors.
+pub mod error;

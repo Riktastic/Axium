@@ -69,6 +69,7 @@ rustls-pemfile = "2.2.0"
 validator = { version = "0.20.0", features = ["derive"] }
 regex = "1.11.1"
 thiserror = "2.0.12"
+async-trait = "0.1"
 
 # Image handling
 webp = { version = "0.3.0" }

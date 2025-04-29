@@ -9,46 +9,45 @@ use std::sync::Arc;
 
 use crate::database::users::update_user_in_db;
 use crate::models::user::{User, UserUpdateBody, UserUpdateResponse};
+use crate::models::error::ErrorResponse;
 use crate::routes::AppState;
 
 // --- Route Handler ---
 
-/// Updates a user's profile fields.
+/// Updates a user's profile fields with comprehensive validation
 ///
 /// This endpoint allows a user to update their own profile, or an admin to update any user's profile.
 /// Fields not included in the request body will remain unchanged. Fields set to `null` (if supported by the struct)
 /// will be set to `NULL` in the database.
 ///
-/// - Regular users can only update their own profile (`/users/current` or their own UUID).
-/// - Admins (role_level == 2) can update any user's profile.
+/// # Validation Layers
+/// 1. **Structural Validation**: Handled by `UserUpdateBody`'s `deny_unknown_fields` attribute
+/// 2. **Business Logic Validation**: Manual checks for role_level, tier_level, and birthday
 ///
-/// # Request body
-/// Partial user profile information to update. Omitted fields are not changed.
+/// # Request Flow
+/// 1. Permission check (self or admin)
+/// 2. UUID validation
+/// 3. Business logic validation
+/// 4. Database update
 ///
-/// # Responses
-/// - 200: Profile updated successfully
-/// - 400: Validation error
-/// - 401: Unauthorized
-/// - 403: Not allowed
-/// - 500: Internal server error
-///
+/// # Error Responses
+/// - **400 Bad Request**: Automatic for unknown fields + manual validation errors
+/// - **403 Forbidden**: Authorization failures
+/// - **500 Internal Server Error**: Database errors
+/// 
+///  ToDo: Haven't been able to clean up the error messages. Deserialization fails in most cases.
 #[utoipa::path(
     patch,
     path = "/users/{id}",
     tag = "user",
-    security(
-        ("jwt_token" = []),
-    ),
+    security(("jwt_token" = [])),
     request_body = UserUpdateBody,
-    params(
-        ("id" = String, Path, description = "User UUID or 'current' for the current user"),
-    ),
+    params(("id" = String, Path, description = "User UUID or 'current'")),
     responses(
         (status = 200, description = "Profile updated successfully", body = UserUpdateResponse),
-        (status = 400, description = "Validation error", body = String),
-        (status = 401, description = "Unauthorized", body = serde_json::Value),
-        (status = 403, description = "Not allowed", body = serde_json::Value),
-        (status = 500, description = "Internal server error", body = String)
+        (status = 400, description = "Validation error", body = ErrorResponse),
+        (status = 403, description = "Not allowed", body = ErrorResponse),
+        (status = 500, description = "Internal server error", body = ErrorResponse)
     ),
 )]
 #[instrument(skip(state, current_user, update))]
@@ -58,7 +57,7 @@ pub async fn patch_user_profile(
     Extension(current_user): Extension<User>,
     Json(update): Json<UserUpdateBody>,
 ) -> Result<Json<serde_json::Value>, (StatusCode, Json<serde_json::Value>)> {
-    // Permission check: allow self or admin
+    // --- Permission Validation ---
     let is_admin = current_user.role_level == 2;
     let target_user_id = if id == "current" {
         current_user.id
@@ -66,74 +65,97 @@ pub async fn patch_user_profile(
         match uuid::Uuid::parse_str(&id) {
             Ok(uuid) => {
                 if uuid != current_user.id && !is_admin {
-                    return Err((StatusCode::FORBIDDEN, Json(json!({ "error": "Not allowed" }))));  // 403
+                    return Err((StatusCode::FORBIDDEN, Json(json!({ "error": "Not allowed" }))));
                 }
                 uuid
             }
-            Err(_) => return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Invalid UUID" })))), // 400
+            Err(_) => return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Invalid UUID" })))),
         }
     };
 
-    // Validate fields in `UserUpdateBody`
+    // --- Business Logic Validation ---
     let mut validation_errors = Vec::new();
 
-    // Check for any unknown fields in the update struct
-    let known_fields = vec![
-        "first_name", "last_name", "country_code", "language_code", 
-        "birthday", "description", "role_level", "tier_level"
-    ];
-
-    // Convert `update` to a map to easily check for unknown fields
-    let update_value = serde_json::to_value(&update).unwrap_or_default();
-    let update_map = update_value.as_object().cloned().unwrap_or_default();
-    
-    for field in update_map.keys() {
-        if !known_fields.contains(&field.as_str()) {
-            validation_errors.push(format!("Unknown field: {}", field));
-        }
-    }
-
-    // Role level validation
+    // Role Level Validation
     if let Some(role_level) = update.role_level {
-        if is_admin && (role_level != 1 && role_level != 2) {
-            validation_errors.push("Invalid role level".to_string());
-        } else if !is_admin && role_level != current_user.role_level {
-            validation_errors.push("Cannot change your own role level".to_string());
-        }
+        validate_role_level(role_level, is_admin, current_user.role_level, &mut validation_errors);
     }
 
-    // Tier level validation
+    // Tier Level Validation
     if let Some(tier_level) = update.tier_level {
-        // Add your tier_level validation logic here
-        if is_admin {
-            // Example: Validate tier levels 1-4 for admin
-            if tier_level < 1 || tier_level > 4 {
-                validation_errors.push("Tier level must be between 1-4".to_string());
-            }
-        } else if tier_level != current_user.tier_level {
-            validation_errors.push("Cannot change your own tier level".to_string());
-        }
+        validate_tier_level(tier_level, is_admin, current_user.tier_level, &mut validation_errors);
     }
 
-    // Birthday validation
+    // Birthday Validation
     if let Some(birthday) = update.birthday {
-        // Get current date as NaiveDate
-        let current_date = chrono::Utc::now().naive_utc().date();
-        
-        // Compare NaiveDate with NaiveDate
-        if birthday > Some(current_date) {
-            validation_errors.push("Birthday cannot be in the future".to_string());
-        }
+        validate_birthday(birthday, &mut validation_errors);
     }
 
-    // Return validation errors if any
+    // --- Error Handling ---
     if !validation_errors.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, Json(json!({ "errors": validation_errors }))));
+        return Err((StatusCode::BAD_REQUEST, Json(json!({ 
+            "error": "Validation failed",
+            "details": validation_errors 
+        }))));
     }
 
-    // Proceed to update the database (if no validation errors)
+    // --- Database Operation ---
     match update_user_in_db(&state.database, target_user_id, update).await {
         Ok(_) => Ok(Json(json!({ "success": true }))),
-        Err(e) => Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": format!("{e}") })))), // 500
+        Err(e) => Err((
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": format!("Database error: {}", e) }))
+        )),
+    }
+}
+
+// --- Validation Helpers ---
+
+/// Validates role level changes
+/// - Admins can only set 1 (regular) or 2 (admin)
+/// - Regular users can't change their role
+fn validate_role_level(
+    new_level: i32,
+    is_admin: bool,
+    current_level: i32,
+    errors: &mut Vec<String>
+) {
+    if is_admin {
+        if ![1, 2].contains(&new_level) {
+            errors.push("Role level must be 1 (regular) or 2 (admin)".into());
+        }
+    } else if new_level != current_level {
+        errors.push("Cannot modify your own role level".into());
+    }
+}
+
+/// Validates tier level changes
+/// - Admins can set 1-4
+/// - Regular users can't change their tier
+fn validate_tier_level(
+    new_level: i32,
+    is_admin: bool,
+    current_level: i32,
+    errors: &mut Vec<String>
+) {
+    if is_admin {
+        if !(1..=4).contains(&new_level) {
+            errors.push("Tier level must be between 1-4".into());
+        }
+    } else if new_level != current_level {
+        errors.push("Cannot modify your own tier level".into());
+    }
+}
+
+/// Validates birthday is not in the future
+fn validate_birthday(
+    birthday: Option<chrono::NaiveDate>,
+    errors: &mut Vec<String>
+) {
+    if let Some(bdate) = birthday {
+        let today = chrono::Utc::now().naive_utc().date();
+        if bdate > today {
+            errors.push("Birthday cannot be in the future".into());
+        }
     }
 }
