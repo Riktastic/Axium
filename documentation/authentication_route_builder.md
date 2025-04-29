@@ -100,6 +100,3 @@ pub fn create_routes(state: Arc) -> Router {
 
 This builder pattern is a **powerful, DRY, and idiomatic way** to manage authentication and role-based authorization in Axum, while keeping your codebase maintainable and secure.  
 If you need to add more roles, simply update your `authorize` logic and role documentation!
-
----
-Answer from Perplexity: pplx.ai/share
