@@ -3,6 +3,7 @@ use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::error::ProvideErrorMetadata;
 
 /// Uploads a file to S3/MinIO and returns the public URL (or error)
+#[allow(dead_code)]
 pub async fn upload_to_storage(
     s3_client: &S3Client,
     bucket: &str,

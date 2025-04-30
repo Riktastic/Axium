@@ -7,6 +7,7 @@ use core::{config, server};
 // Other modules for database, routes, models, and middlewares
 mod database;
 mod storage;
+mod cache;
 mod routes;
 mod models;
 mod middlewares;

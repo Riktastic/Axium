@@ -10,6 +10,8 @@ use std::sync::{Arc, Mutex};
 use tracing::instrument; // For logging
 use sqlx::PgPool; // Import PgPool for database connection
 use aws_sdk_s3::Client as S3Client; // Import S3Client for storage connection
+use deadpool_redis::Pool; // Import Pool for Redis connection
+use deadpool_redis::redis::AsyncCommands;
 
 use crate::models::health::HealthResponse;
 use crate::routes::AppState;
@@ -30,7 +32,7 @@ pub async fn get_health(State(state): State<Arc<AppState>>) -> impl IntoResponse
     let system = Arc::new(Mutex::new(System::new_with_specifics(RefreshKind::everything())));
 
     // Run checks in parallel
-    let (cpu_result, mem_result, disk_result, process_result, db_result, storage_result, net_result) = join!(
+    let (cpu_result, mem_result, disk_result, process_result, db_result, storage_result, cache_result, net_result) = join!(
         task::spawn_blocking({
             let system = Arc::clone(&system);
             move || {
@@ -60,6 +62,7 @@ pub async fn get_health(State(state): State<Arc<AppState>>) -> impl IntoResponse
         //
         check_database_connection(&state.database), // Async function to check database connection
         check_storage_connection(&state.storage), // Async function to check storage connection	
+        check_cache_connection(&state.cache), // Async function to check cache connection
         task::spawn_blocking(check_network_connection) // Blocking, okay in spawn_blocking
     );
 
@@ -129,6 +132,16 @@ pub async fn get_health(State(state): State<Arc<AppState>>) -> impl IntoResponse
         }
     } else {
         details["storage"] = json!({ "status": "error", "message": "Failed to retrieve storage status" });
+        status = "degraded";
+    }
+
+    if let Ok(cache_status) = cache_result {
+        details["cache"] = json!({ "status": if cache_status { "ok" } else { "degraded" } });
+        if !cache_status {
+            status = "degraded";
+        }
+    } else {
+        details["cache"] = json!({ "status": "error", "message": "Failed to retrieve cache status" });
         status = "degraded";
     }
 
@@ -237,6 +250,25 @@ async fn check_storage_connection(client: &S3Client) -> Result<bool, ()> {
         Ok(_) => Ok(true),
         Err(e) => {
             tracing::error!("Failed to connect to storage: {}", e);
+            Ok(false)
+        }
+    }
+}
+
+pub async fn check_cache_connection(pool: &Pool) -> Result<bool, ()> {
+    match pool.get().await {
+        Ok(mut conn) => {
+            // Try a simple PING command
+            match conn.ping::<()>().await {
+                Ok(_) => Ok(true),
+                Err(e) => {
+                    tracing::error!("Failed to connect to cache: {}", e);
+                    Ok(false)
+                }
+            }
+        }
+        Err(e) => {
+            tracing::error!("Failed to get Redis connection from pool: {}", e);
             Ok(false)
         }
     }

@@ -14,6 +14,7 @@ use aws_sdk_s3::{
 /// # Returns
 /// - `Ok(())` on successful deletion
 /// - `Err(String)` with detailed error message on failure
+#[allow(dead_code)]
 pub async fn delete_from_storage(
     s3_client: &S3Client,
     bucket: &str,

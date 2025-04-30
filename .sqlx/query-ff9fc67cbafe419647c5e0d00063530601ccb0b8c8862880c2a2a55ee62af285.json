@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n                SELECT id, username, email, role_level, tier_level, creation_date, \n                       profile_picture_url, first_name, last_name, country_code, \n                       language_code, birthday, description\n                FROM users\n                WHERE username = $1\n                ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "username",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 2,
+        "name": "email",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 3,
+        "name": "role_level",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 4,
+        "name": "tier_level",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 5,
+        "name": "creation_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 6,
+        "name": "profile_picture_url",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "first_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_name",
+        "type_info": "Varchar"
+      },
+      {
+        "ordinal": 9,
+        "name": "country_code",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 10,
+        "name": "language_code",
+        "type_info": "Bpchar"
+      },
+      {
+        "ordinal": 11,
+        "name": "birthday",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 12,
+        "name": "description",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "ff9fc67cbafe419647c5e0d00063530601ccb0b8c8862880c2a2a55ee62af285"
+}

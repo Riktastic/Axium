@@ -54,52 +54,77 @@ services:
 
     # Environment variables for the service
     environment:
-      # Set environment (e.g., development, production)
-      - ENVIRONMENT=${ENVIRONMENT:-development} # Default to development if not set
+      # General Configuration
+      - ENVIRONMENT=${ENVIRONMENT:-development}
 
-      # Server settings
-      - SERVER_IP=${SERVER_IP:-0.0.0.0} # Default IP to listen on
-      - SERVER_PORT=${SERVER_PORT:-3000} # Default port to listen on
-      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true} # Enable tracing by default
-      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2} # Number of worker threads
+      # Server Configuration
+      - SERVER_IP=${SERVER_IP:-127.0.0.1}
+      - SERVER_PORT=${SERVER_PORT:-8000}
+      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true}
+      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2}
 
-      # Database connection settings
-      - DATABASE_URL=postgres://${DATABASE_USER:-dbuser}:${DATABASE_PASSWORD:-1234}@pgpool/${DATABASE_DB:-axium}
-      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20} # Max database connections
-      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5} # Min database connections
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL:-postgres://dbuser:1234@localhost/axium}
+      - DATABASE_USER=${DATABASE_USER:-dbuser}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-1234}
+      - DATABASE_DB=${DATABASE_DB:-axium}
+      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20}
+      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5}
 
-      # Storage settings
-      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://storageloadbalancer}
-      - STORAGE_PORT=${STORAGE_PORT:-9000} # Port for storage service
-      - STORAGE_REGION=${STORAGE_REGION:-us-east-1} # Default region for storage
+      # Storage Configuration (MinIO/S3)
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://storage}
+      - STORAGE_PORT=${STORAGE_PORT:-9000}
+      - STORAGE_CONSOLE_PORT=${STORAGE_CONSOLE_PORT:-9001}
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
       - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:-minioadmin}
       - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:-minioadmin}
-      - STORAGE_BUCKET_PROFILE_PICTURES=${STORAGE_BUCKET_PROFILE_PICTURES:-axium} # Default bucket for profile pictures
+      - STORAGE_BUCKET_PROFILE_PICTURES=${STORAGE_BUCKET_PROFILE_PICTURES:-profile-pictures}
 
-      # HTTPS settings
-      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false} # Disable HTTPS by default
-      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true} # Enable HTTP/2 for HTTPS
+      # HTTPS Configuration
+      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false}
+      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true}
+      - SERVER_HTTPS_CERT_FILE_PATH=${SERVER_HTTPS_CERT_FILE_PATH:-/app/certs/cert.pem}
+      - SERVER_HTTPS_KEY_FILE_PATH=${SERVER_HTTPS_KEY_FILE_PATH:-/app/certs/key.pem}
 
-      # Certificate paths for HTTPS
-      - SERVER_HTTPS_CERT_FILE_PATH=/app/certs/cert.pem
-      - SERVER_HTTPS_KEY_FILE_PATH=/app/certs/key.pem
+      # Rate Limit Configuration
+      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5}
+      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1}
 
-      # Rate limiting settings
-      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5} # Default rate limit
-      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1} # Rate limit period in seconds
+      # Compression Configuration
+      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true}
+      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6}
 
-      # Compression settings
-      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true} # Enable compression by default
-      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6} # Compression level
+      # Authentication Configuration (JWT)
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!}
+      - JWT_ISSUER=${JWT_ISSUER:-your_issuer}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-your_audience}
+      - JWT_ALLOW_COOKIE_AUTH=${JWT_ALLOW_COOKIE_AUTH:-true}
+      - JWT_FORCE_COOKIE_AUTH=${JWT_FORCE_COOKIE_AUTH:-false}
+      - JWT_COOKIE_NAME=${JWT_COOKIE_NAME:-auth_token}
+      - JWT_COOKIE_MAX_AGE=${JWT_COOKIE_MAX_AGE:-604800}
+      - JWT_COOKIE_SAMESITE=${JWT_COOKIE_SAMESITE:-Lax}
 
-      # JWT secret key (change this in production!)
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!} # VERY important to change this!
+      # CORS Configuration
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN:-http://127.0.0.1:3000}
+      - CORS_ALLOW_METHODS=${CORS_ALLOW_METHODS:-GET,POST,PUT,DELETE,OPTIONS}
+      - CORS_ALLOW_HEADERS=${CORS_ALLOW_HEADERS:-Authorization,Content-Type,Origin}
+      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
+      - CORS_MAX_AGE=${CORS_MAX_AGE:-3600}
+
+      # Redis Configuration
+      - CACHE_ENDPOINT=${CACHE_ENDPOINT:-127.0.0.1}
+      - CACHE_PORT=${CACHE_PORT:-6379}
+      - CACHE_USERNAME=${CACHE_USERNAME:-}
+      - CACHE_PASSWORD=${CACHE_PASSWORD:-}
+      - CACHE_DB=${CACHE_DB:-0}
 
     # Depend on the pgpool service and wait until it's healthy
     depends_on:
       pgpool:
         condition: service_healthy
       storageloadbalancer:
+        condition: service_healthy
+      cache:
         condition: service_healthy
 
     # Mount volumes for certificates
@@ -137,6 +162,10 @@ services:
       - "${SERVER2_PORT:-3001}:${SERVER2_PORT:-3001}"
     depends_on:
       pgpool:
+        condition: service_healthy
+      storageloadbalancer:
+        condition: service_healthy
+      cache:
         condition: service_healthy
     # Health check settings
     healthcheck:
@@ -342,6 +371,29 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:9002/minio/health/live"]
       interval: 30s
       timeout: 20s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  # Redis Service, for a full failover system use: redis sentinel.
+  cache:
+    image: redis:latest
+    ports:
+      - "6379:6379"  # Expose Redis port
+    environment:
+      - REDIS_PASSWORD=${CACHE_PASSWORD:-}  # Set Redis password if configured
+      - REDIS_USER=${CACHE_USERNAME:-}  # Redis username if applicable
+      - REDIS_DB=${CACHE_DB:-0}  # Default Redis DB
+    volumes:
+      - ./docker/cache/data:/data  # Persist Redis data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-h", "localhost", "-p", "${CACHE_PORT:-6379}", "PING"]
+      interval: 30s
+      timeout: 10s
       retries: 3
       start_period: 30s
     deploy:

@@ -34,7 +34,12 @@ pub async fn create_server() -> Router<()> {
         .expect("❌  Failed to connect to storage.");
     println!("✔️   Connected to storage.");
 
-    let shared_state = Arc::new(AppState { database: database, storage: storage });
+    // === Cache Setup ===
+    let cache = crate::cache::connect::connect_to_cache().await
+        .expect("❌  Failed to connect to cache.");
+    println!("✔️   Connected to cache.");
+
+    let shared_state = Arc::new(AppState { database: database, storage: storage, cache: cache });
 
     // === Application Routes ===
     let mut app = create_routes(shared_state);

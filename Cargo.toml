@@ -22,6 +22,10 @@ rand_core = "0.6.4" # 2024-2-3: SQLx 0.8.3 does not support 0.9.
 moka = { version = "0.12.10", features = ["future"] }
 lazy_static = "1.5"
 
+# Cache interaction
+redis = { version = "0.30.0", features = ["aio", "tokio-comp"] }
+deadpool-redis = "0.20"
+
 # Storage interaction
 aws-config = "1.6.2"
 aws-sdk-s3 = "1.83.0"
@@ -78,3 +82,10 @@ image = { version = "0.25.6", features = ["jpeg", "png"] }
 # Documentation
 utoipa = { version = "5.3.1", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9.0.1", features = ["axum"] } 
+
+[profile.release]
+opt-level = "z"        # Optimize for size ("s" may be worth testing too)
+lto = true             # Enable Link Time Optimization
+codegen-units = 1      # Allow for maximum cross-module optimization
+panic = "abort"        # Remove unwinding code for smaller binaries
+strip = true           # Strip debug symbols from the final binary

@@ -1,11 +1,13 @@
 # 🦖 Axium
-**An example API built with Rust, Axum, SQLx, S3 and PostgreSQL.**  
+**An example API built with Rust, Axum, SQLx, S3, Redis, and PostgreSQL.**  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > ⚠️ **Warning:** This project is under active development. Pushed changes have been tested. But it might not yet be production ready.
 
 ## Summary
-Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
+Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3, Redis, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
+
+The resulting executable (Windows) is about 
 
 ## Table of Contents
 - [🦖 Axium](#-axium)
@@ -58,7 +60,8 @@ _Security by design architecture_
 _Relational data made simple_  
 - SQLx-powered async database operations  
 - Migration system with transactional safety  
-- Connection pooling for high concurrency  
+- Connection pooling for high concurrency
+- Lower stress on the database by checking the Redis cache first
 
 ### **Performance Optimizations**  
 _Engineered for speed at scale_  
@@ -72,6 +75,9 @@ _Production monitoring made easy_
 ```json
 {
     "details": {
+        "cache": {
+            "status": "ok"
+        },
         "cpu_usage": {
             "available_percentage": "2.48",
             "status": "low",
@@ -101,6 +107,9 @@ _Production monitoring made easy_
         "network": {
             "status": "ok"
         }
+        "storage": {
+            "status": "ok"
+        },
     },
     "status": "degraded"
 }
@@ -139,38 +148,25 @@ _Future-proof codebase management_
 ## 📂 Project structure
 ```
 axium/                              # Root project directory
-├── 📁 migrations/                  # Database schema migrations (SQLx)
-│
-├── 📁 src/                         # Application source code
-│   ├── 📁 core/                    # Core application infrastructure
-│   │   ├── config.rs               # Configuration loader (.env, env vars)
-│   │   └── server.rs               # HTTP/HTTPS server initialization
-│   │
-│   ├── 📁 database/                # Database access layer
-│   │   ├── connection.rs           # Connection pool management
-│   │   ├── queries/                # SQL query modules
-│   │   └── models.rs               # Database entity definitions
-│   │
-│   ├── 📁 middlewares/             # Axum middleware components
-│   ├── 📁 routes/                  # API endpoint routing
-│   │   └── mod.rs                  # Route aggregator
-│   │
-│   ├── 📁 handlers/                # Request handlers
-│   │
-│   ├── 📁 utils/                   # Common utilities
-│   │
-│   ├── 📁 wrappers/                   # Wrapper implementations
-│   │
+├── migrations/                     # Database schema migrations
+├── src/                            # Application source code
+│   ├── core/                       # Core application infrastructure
+│   ├── database/                   # Database access layer (SQLx)
+│   ├── middlewares/                # Middleware components
+│   ├── routes/                     # API endpoint routing
+│   ├── handlers/                   # Request handlers
+│   ├── utils/                      # Common utilities
+│   ├── wrappers/                   # Wrapper implementations
+│   ├── cache/                      # Caching mechanisms (Redis)
+│   ├── storage/                    # Storage service integrations (S3 / MinIO)
 │   └── main.rs                     # Application entry point
-│
-├── 📄 .env                         # Environment configuration
-├── 📄 .env.example                 # Environment template
-├── 📄 Dockerfile                   # Production container build
-├── 📄 docker-compose.yml           # Local development stack
-└── 📄 Cargo.toml                   # Rust dependencies & metadata
+├── documentation/                  # Project documentation
+├── Bruno.json                      # API testing configuration for Bruno
+├── .env.example                    # Environment template
+├── Dockerfile                      # Production container build
+├── docker-compose.yml              # Local development stack
+└── Cargo.toml                      # Rust dependencies & metadata
 ```
-
-Each folder has a detailed README.md file which explains the folder in more detail.
 
 ## 🌐 Default API endpoints
 
