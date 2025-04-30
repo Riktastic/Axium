@@ -1,11 +1,11 @@
 # 🦖 Axium
-**An example API built with Rust, Axum, SQLx, and PostgreSQL.**  
+**An example API built with Rust, Axum, SQLx, S3 and PostgreSQL.**  
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 > ⚠️ **Warning:** This project is under active development. Pushed changes have been tested. But it might not yet be production ready.
 
 ## Summary
-Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3 and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
+Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
 
 ## Table of Contents
 - [🦖 Axium](#-axium)
@@ -30,13 +30,6 @@ Axium is a high-performance, security-focused API boilerplate built using Rust, 
     - [👤 Default accounts](#-default-accounts)
       - [Administrative password resets](#administrative-password-resets)
     - [⚙️ Configuration](#️-configuration)
-  - [🤝 Contributing](#-contributing)
-    - [📝 How to Contribute](#-how-to-contribute)
-    - [🔍 Code Style](#-code-style)
-    - [🛠️ Reporting Bugs](#️-reporting-bugs)
-    - [💬 Discussion](#-discussion)
-    - [🧑‍💻 Code of Conduct](#-code-of-conduct)
-    - [🎉 Thanks for Contributing!](#-thanks-for-contributing)
 
 ## 🚀 Core Features
 ### **Effortless Deployment**  
@@ -95,6 +88,10 @@ _Production monitoring made easy_
             {
                 "name": "postgres",
                 "status": "running"
+            },
+            {
+                "name": "minio",
+                "status": "running"
             }
         ],
         "memory": {
@@ -113,10 +110,12 @@ _Production monitoring made easy_
 _Code with confidence_  
 - Context-aware user injection system:  
 ```rust
-async fn create_todo(
-    Extension(User { id, role, .. }): Extension<User>, // Auto-injected
-    Json(payload): Json<TodoRequest>
-) -> Result<impl IntoResponse> {
+pub async fn get_users_by_id(
+    State(state): State<Arc<AppState>>, // Database connection + storage connection
+    Path(id): Path<String>, // Path variables
+    Extension(current_user): Extension<User>, // Current user
+) -> impl IntoResponse {
+
     // Business logic with direct user context
 }
 ```
@@ -133,7 +132,8 @@ _Future-proof codebase management_
 |-----------------------|---------------------------------|
 | Web Framework         | Axum 0.8 + Tower               |
 | Database              | PostgreSQL + SQLx 0.8          |
-| Security              | JWT + Argon2 + Rustls           |
+| Storage               | S3 / MinIO                      |
+| Security              | JWT + Argon2 + Rustls + TOPTP    |
 | Monitoring            | Tracing + Sysinfo              |
 
 ## 📂 Project structure
@@ -299,229 +299,6 @@ If you receive a JWT in the response body:
    - Force user password change on next login  
 
 ### ⚙️ Configuration
-Create a .env file in the root of the project or configure the application using environment variables.
+Most configuration options can be set using the `.env` file and the database tables that are being created during the first run (check out: `/migrations`). 
 
-Make sure to change the `JWT_SECRET_KEY`.
-
-```env
-# ==============================
-# ⚙️ GENERAL CONFIGURATION
-# ==============================
-ENVIRONMENT="development" # "production"
-
-# ==============================
-# 🌍 SERVER CONFIGURATION
-# ==============================
-
-# IP address the server will bind to (0.0.0.0 allows all network interfaces)
-SERVER_IP="0.0.0.0"
-
-# Port the server will listen on
-SERVER_PORT="3000"
-
-# Enable tracing for debugging/logging (true/false)
-SERVER_TRACE_ENABLED=true
-
-# Amount of threads used to run the server
-SERVER_WORKER_THREADS=2
-
-
-# ==============================
-# 🛢️ DATABASE CONFIGURATION
-# ==============================
-
-# For running Axium standalone:
-DATABASE_URL="postgres://dbuser:1234@localhost/axium"
-
-# For docker:
-DATABASE_USER=dbuser
-DATABASE_PASSWORD=1234
-DATABASE_DB=axium
-
-# Maximum number of connections in the database pool
-DATABASE_MAX_CONNECTIONS=20
-
-# Minimum number of connections in the database pool
-DATABASE_MIN_CONNECTIONS=5
-
-
-# ==============================
-# ☁️ STORAGE (S3/MINIO) CONFIGURATION
-# ==============================
-
-# Endpoint (e.g., http://127.0.0.1:9000)
-STORAGE_ENDPOINT="http://127.0.0.1:9000"
-
-# Region (e.g., us-east-1)
-STORAGE_REGION="us-east-1"
-
-# Access key
-STORAGE_ACCESS_KEY="minioadmin"
-
-# Secret key
-STORAGE_SECRET_KEY="minioadmin"
-
-# Bucket name for storing profile pictures. ! Make sure that this bucket has been created.
-STORAGE_BUCKET_PROFILE_PICTURES="profile-pictures"
-
-
-# ==============================
-# 🔒 HTTPS CONFIGURATION
-# ==============================
-
-# Enable HTTPS (true/false)
-SERVER_HTTPS_ENABLED=false
-
-# Enable HTTP/2 when using HTTPS (true/false)
-SERVER_HTTPS_HTTP2_ENABLED=true
-
-# Path to the SSL certificate file (only used if SERVER_HTTPS_ENABLED=true)
-SERVER_HTTPS_CERT_FILE_PATH=cert.pem
-
-# Path to the SSL private key file (only used if SERVER_HTTPS_ENABLED=true)
-SERVER_HTTPS_KEY_FILE_PATH=key.pem
-
-
-# ==============================
-# 🚦 RATE LIMIT CONFIGURATION
-# ==============================
-
-# Maximum number of requests allowed per period
-SERVER_RATE_LIMIT=5
-
-# Time period (in seconds) for rate limiting
-SERVER_RATE_LIMIT_PERIOD=1
-
-
-# ==============================
-# 📦 COMPRESSION CONFIGURATION
-# ==============================
-
-# Enable Brotli compression (true/false)
-SERVER_COMPRESSION_ENABLED=true
-
-# Compression level (valid range: 0-11, where 11 is the highest compression)
-SERVER_COMPRESSION_LEVEL=6
-
-
-# ==============================
-# 🔑 AUTHENTICATION CONFIGURATION
-# ==============================
-
-# JWT secret key.
-JWT_SECRET_KEY="Change me!"
-
-# JWT issuer
-JWT_ISSUER="your_issuer"  # Set this to your desired issuer value
-
-# JWT audience
-JWT_AUDIENCE="your_audience"  # Set this to your desired audience value
-
-# Allow authentication via HTTP cookies (true/false)
-JWT_ALLOW_COOKIE_AUTH=true
-
-# Force authentication via HTTP cookies only (true/false)
-JWT_FORCE_COOKIE_AUTH=false
-
-# Name of the cookie used to store the JWT token
-JWT_COOKIE_NAME="auth_token"
-
-# Maximum age of the JWT token in seconds
-JWT_COOKIE_MAX_AGE=604800 # 7 days in seconds
-
-# SameSite attribute for the JWT cookie (Lax, Strict, or None), SERVER_HTTPS_ENABLED must be true.
-JWT_COOKIE_SAMESITE="Lax" 
-
-
-# ==============================
-# 🌐 CORS CONFIGURATION
-# ==============================
-
-# Allowed origin for CORS requests (comma-separated for multiple origins)
-# Example: "http://127.0.0.1:3000,http://localhost:3000"
-CORS_ALLOW_ORIGIN="*"
-
-# Allowed HTTP methods for CORS (comma-separated)
-# Example: "GET,POST,PUT,DELETE,OPTIONS"
-CORS_ALLOW_METHODS="GET,POST,PUT,DELETE,OPTIONS"
-
-# Allowed headers for CORS (comma-separated)
-# Example: "Authorization,Content-Type,Origin"
-CORS_ALLOW_HEADERS="Authorization,Content-Type,Origin"
-
-# Allow credentials (true/false)
-CORS_ALLOW_CREDENTIALS=true
-
-# Max age (in seconds) for preflight request caching
-CORS_MAX_AGE=3600
-```
-
-## 🤝 Contributing
-
-We welcome contributions to the Axium project! Whether it's fixing bugs, improving documentation, or adding new features, your help is greatly appreciated. Please follow these guidelines to ensure a smooth contribution process.
-
-### 📝 How to Contribute
-
-1. **Fork the Repository**  
-   Start by forking the repository to your own GitHub account.
-
-2. **Clone Your Fork**  
-   Clone your forked repository to your local machine:
-   ```bash
-   git clone https://github.com/your-username/Axium.git
-   cd Axium
-   ```
-
-3. **Create a New Branch**  
-   Create a new branch for your feature or bug fix:
-   ```bash
-   git checkout -b feature-name
-   ```
-
-4. **Make Your Changes**  
-   Make the necessary changes to the code or documentation. Make sure to write tests for new features and adhere to the existing code style.
-
-5. **Commit Your Changes**  
-   Commit your changes with a clear, descriptive message:
-   ```bash
-   git commit -m "Add feature XYZ or fix issue ABC"
-   ```
-
-6. **Push to Your Fork**  
-   Push your changes to your fork:
-   ```bash
-   git push origin feature-name
-   ```
-
-7. **Open a Pull Request**  
-   Open a pull request against the `main` branch of the original repository. In the description, provide details about the changes you made, the problem they solve, and any testing you performed.
-
-### 🔍 Code Style
-
-- Follow the **Rust style guidelines** outlined in the [Rust Style Guide](https://doc.rust-lang.org/1.0.0/style/).
-- Use **cargo fmt** to automatically format your code:
-  ```bash
-  cargo fmt
-  ```
-- Write **meaningful commit messages** that describe the changes you've made.
-
-### 🛠️ Reporting Bugs
-
-If you encounter a bug or issue, please check if it has already been reported in the [GitHub issues](https://github.com/Riktastic/Axium/issues). If not, create a new issue, providing the following information:
-
-- A clear description of the problem.
-- Steps to reproduce the issue.
-- Expected vs. actual behavior.
-- Any relevant logs or error messages.
-
-### 💬 Discussion
-
-Feel free to open discussions in the [Discussions](https://github.com/Riktastic/Axium/discussions) section for general questions, ideas, or advice on how to improve the project.
-
-### 🧑‍💻 Code of Conduct
-
-Please be respectful and follow the [Code of Conduct](https://www.contributor-covenant.org/) while interacting with other contributors. Let's maintain a positive and welcoming environment.
-
-### 🎉 Thanks for Contributing!
-
-Your contributions help make Axium better for everyone! 🙏
+As this project is a template we encourage you to tinker it to your hearts desire. First place to start in most cases is the `handlers` folder. Here you can define per endpoint what should happen. Afterwards you can easily integrate your new handler in one of the `/routes`.

@@ -1,8 +1,8 @@
 # Make sure that the databases are exactly the same before running Axium.
 
 services:
-  # HAProxy Load Balancer
-  haproxy:
+  # HAProxy Load Balancer for Axium
+  axiumloadbalancer:
     # Use the latest HAProxy image
     image: haproxy:latest
     # Map port 80 from the container to the host machine
@@ -68,6 +68,14 @@ services:
       - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20} # Max database connections
       - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5} # Min database connections
 
+      # Storage settings
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://storageloadbalancer}
+      - STORAGE_PORT=${STORAGE_PORT:-9000} # Port for storage service
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1} # Default region for storage
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:-minioadmin}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:-minioadmin}
+      - STORAGE_BUCKET_PROFILE_PICTURES=${STORAGE_BUCKET_PROFILE_PICTURES:-axium} # Default bucket for profile pictures
+
       # HTTPS settings
       - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false} # Disable HTTPS by default
       - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true} # Enable HTTP/2 for HTTPS
@@ -90,6 +98,8 @@ services:
     # Depend on the pgpool service and wait until it's healthy
     depends_on:
       pgpool:
+        condition: service_healthy
+      storageloadbalancer:
         condition: service_healthy
 
     # Mount volumes for certificates
@@ -251,3 +261,91 @@ services:
           cpus: '${DB_CPU_LIMIT:-0.5}'
           # Limit RAM usage (default: 256MB)
           memory: ${DB_MEMORY_LIMIT:-256M}
+
+  # HAProxy Load Balancer for the storage services
+  storageloadbalancer:
+    # Use the latest HAProxy image
+    image: haproxy:latest
+    # Map port 80 from the container to the host machine
+    ports:
+      - "9000:9000"
+    command:
+      - /bin/sh
+      - -c
+      - |
+        cat > /usr/local/etc/haproxy/haproxy.cfg << EOF
+        global
+          daemon
+          maxconn 256
+
+        defaults
+          mode http
+          timeout connect 5000ms
+          timeout client 50000ms
+          timeout server 50000ms
+
+        frontend http-in
+          bind *:9000
+          default_backend servers
+
+        backend servers
+          balance roundrobin
+          server server1 storage:9001 check
+          server server2 storage2:9002 check
+        EOF
+        haproxy -f /usr/local/etc/haproxy/haproxy.cfg
+    # Depend on the Axium services and wait until they're ready
+    # Depend on both PostgreSQL databases and wait until they're healthy
+    depends_on:
+      storage:
+        condition: service_healthy
+      storage2:
+        condition: service_healthy
+
+
+
+  storage:
+    image: minio/minio
+    command: server --console-address ":9011" --address ":9001" /data
+    ports:
+     - "9001:9001"
+     - "9011:9011"
+    environment:
+      - MINIO_ROOT_USER=${STORAGE_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${STORAGE_SECRET_KEY:-minioadmin}
+    volumes:
+      - ./docker/minio/data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9001/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+
+  storage2:
+    image: minio/minio
+    command: server --console-address ":9012" --address ":9002" /data
+    ports:
+     - "9002:9002"
+     - "9012:9012"
+    environment:
+      - MINIO_ROOT_USER=${STORAGE_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${STORAGE_SECRET_KEY:-minioadmin}
+    volumes:
+      - ./docker/minio/data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9002/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M

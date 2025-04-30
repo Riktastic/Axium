@@ -28,12 +28,14 @@ pub enum StorageError {
 
 pub async fn connect_to_storage() -> Result<S3Client, StorageError> {
     // Load environment variables with clear errors
-    let endpoint = get_env("STORAGE_ENDPOINT");
+    let endpoint_base = get_env("STORAGE_ENDPOINT");
+    let port = get_env_with_default("STORAGE_PORT", "9000"); // Default 
     let region = get_env_with_default("STORAGE_REGION", "us-east-1");
     let access_key = get_env("STORAGE_ACCESS_KEY");
     let secret_key = get_env("STORAGE_SECRET_KEY");
 
     // Validate endpoint URL
+    let endpoint = format!("{}:{}", endpoint_base.trim_end_matches('/'), port);
     let endpoint_url = Url::parse(&endpoint)?;
 
     // Build base AWS config

@@ -9,6 +9,8 @@ use tokio::{task, join};
 use std::sync::{Arc, Mutex};
 use tracing::instrument; // For logging
 use sqlx::PgPool; // Import PgPool for database connection
+use aws_sdk_s3::Client as S3Client; // Import S3Client for storage connection
+
 use crate::models::health::HealthResponse;
 use crate::routes::AppState;
 
@@ -28,7 +30,7 @@ pub async fn get_health(State(state): State<Arc<AppState>>) -> impl IntoResponse
     let system = Arc::new(Mutex::new(System::new_with_specifics(RefreshKind::everything())));
 
     // Run checks in parallel
-    let (cpu_result, mem_result, disk_result, process_result, db_result, net_result) = join!(
+    let (cpu_result, mem_result, disk_result, process_result, db_result, storage_result, net_result) = join!(
         task::spawn_blocking({
             let system = Arc::clone(&system);
             move || {
@@ -55,7 +57,9 @@ pub async fn get_health(State(state): State<Arc<AppState>>) -> impl IntoResponse
                 check_processes(&mut system, &["postgres", "minio"])  // Pass the mutable reference
             }
         }),
-        check_database_connection(&state.database), // Async function
+        //
+        check_database_connection(&state.database), // Async function to check database connection
+        check_storage_connection(&state.storage), // Async function to check storage connection	
         task::spawn_blocking(check_network_connection) // Blocking, okay in spawn_blocking
     );
 
@@ -114,6 +118,17 @@ pub async fn get_health(State(state): State<Arc<AppState>>) -> impl IntoResponse
         }
     } else {
         details["database"] = json!({ "status": "error", "message": "Failed to retrieve database status" });
+        status = "degraded";
+    }
+
+    // Process Storage result
+    if let Ok(storage_status) = storage_result {
+        details["storage"] = json!({ "status": if storage_status { "ok" } else { "degraded" } });
+        if !storage_status {
+            status = "degraded";
+        }
+    } else {
+        details["storage"] = json!({ "status": "error", "message": "Failed to retrieve storage status" });
         status = "degraded";
     }
 
@@ -215,6 +230,16 @@ fn check_processes(system: &mut System, processes: &[&str]) -> Result<Vec<serde_
 
 async fn check_database_connection(pool: &PgPool) -> Result<bool, sqlx::Error> {
     sqlx::query("SELECT 1").fetch_one(pool).await.map(|_| true).or_else(|_| Ok(false))
+}
+
+async fn check_storage_connection(client: &S3Client) -> Result<bool, ()> {
+    match client.list_buckets().send().await {
+        Ok(_) => Ok(true),
+        Err(e) => {
+            tracing::error!("Failed to connect to storage: {}", e);
+            Ok(false)
+        }
+    }
 }
 
 fn check_network_connection() -> Result<bool, ()> {

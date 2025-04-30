@@ -25,6 +25,8 @@ pub mod models {
     pub use crate::models::*;
 }
 
+use crate::utils::global_error_handler::global_error_handler;  // Global error handler
+
 use self::{
     todo::create_todo_routes,
     user::create_user_routes,
@@ -156,4 +158,5 @@ pub fn create_routes(state: Arc<AppState>) -> Router<()> {
         .merge(create_health_route(state.clone()))
         .with_state(state)
         .layer(TraceLayer::new_for_http())
+        .fallback(global_error_handler)
 }

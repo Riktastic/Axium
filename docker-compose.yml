@@ -12,42 +12,68 @@ services:
 
     # Environment variables for the service
     environment:
-      # Set environment (e.g., development, production)
-      - ENVIRONMENT=${ENVIRONMENT:-development} # Default to development if not set
+      # General Configuration
+      - ENVIRONMENT=${ENVIRONMENT:-development}
 
-      # Server settings
-      - SERVER_IP=${SERVER_IP:-0.0.0.0} # Default IP to listen on
-      - SERVER_PORT=${SERVER_PORT:-3000} # Default port to listen on
-      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true} # Enable tracing by default
-      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2} # Number of worker threads
+      # Server Configuration
+      - SERVER_IP=${SERVER_IP:-127.0.0.1}
+      - SERVER_PORT=${SERVER_PORT:-8000}
+      - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true}
+      - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2}
 
-      # Database connection settings
-      - DATABASE_URL=postgres://${DATABASE_USER:-dbuser}:${DATABASE_PASSWORD:-1234}@db/${DATABASE_DB:-axium}
-      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20} # Max database connections
-      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5} # Min database connections
+      # Database Configuration
+      - DATABASE_URL=${DATABASE_URL:-postgres://dbuser:1234@localhost/axium}
+      - DATABASE_USER=${DATABASE_USER:-dbuser}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-1234}
+      - DATABASE_DB=${DATABASE_DB:-axium}
+      - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20}
+      - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5}
 
-      # HTTPS settings
-      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false} # Disable HTTPS by default
-      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true} # Enable HTTP/2 for HTTPS
+      # Storage Configuration (MinIO/S3)
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://storage}
+      - STORAGE_PORT=${STORAGE_PORT:-9000}
+      - STORAGE_CONSOLE_PORT=${STORAGE_CONSOLE_PORT:-9001}
+      - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
+      - STORAGE_ACCESS_KEY=${STORAGE_ACCESS_KEY:-minioadmin}
+      - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:-minioadmin}
+      - STORAGE_BUCKET_PROFILE_PICTURES=${STORAGE_BUCKET_PROFILE_PICTURES:-profile-pictures}
 
-      # Certificate paths for HTTPS
-      - SERVER_HTTPS_CERT_FILE_PATH=/app/certs/cert.pem
-      - SERVER_HTTPS_KEY_FILE_PATH=/app/certs/key.pem
+      # HTTPS Configuration
+      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false}
+      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true}
+      - SERVER_HTTPS_CERT_FILE_PATH=${SERVER_HTTPS_CERT_FILE_PATH:-/app/certs/cert.pem}
+      - SERVER_HTTPS_KEY_FILE_PATH=${SERVER_HTTPS_KEY_FILE_PATH:-/app/certs/key.pem}
 
-      # Rate limiting settings
-      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5} # Default rate limit
-      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1} # Rate limit period in seconds
+      # Rate Limit Configuration
+      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5}
+      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1}
 
-      # Compression settings
-      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true} # Enable compression by default
-      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6} # Compression level
+      # Compression Configuration
+      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true}
+      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6}
 
-      # JWT secret key (change this in production!)
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!} # VERY important to change this!
+      # Authentication Configuration (JWT)
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!}
+      - JWT_ISSUER=${JWT_ISSUER:-your_issuer}
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-your_audience}
+      - JWT_ALLOW_COOKIE_AUTH=${JWT_ALLOW_COOKIE_AUTH:-true}
+      - JWT_FORCE_COOKIE_AUTH=${JWT_FORCE_COOKIE_AUTH:-false}
+      - JWT_COOKIE_NAME=${JWT_COOKIE_NAME:-auth_token}
+      - JWT_COOKIE_MAX_AGE=${JWT_COOKIE_MAX_AGE:-604800}
+      - JWT_COOKIE_SAMESITE=${JWT_COOKIE_SAMESITE:-Lax}
+
+      # CORS Configuration
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN:-http://127.0.0.1:3000}
+      - CORS_ALLOW_METHODS=${CORS_ALLOW_METHODS:-GET,POST,PUT,DELETE,OPTIONS}
+      - CORS_ALLOW_HEADERS=${CORS_ALLOW_HEADERS:-Authorization,Content-Type,Origin}
+      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
+      - CORS_MAX_AGE=${CORS_MAX_AGE:-3600}
 
     # Depend on the database service and wait until it's healthy
     depends_on:
       db:
+        condition: service_healthy
+      storage:
         condition: service_healthy
 
     # Mount volumes for certificates
@@ -113,3 +139,26 @@ services:
           cpus: '${DB_CPU_LIMIT:-0.5}'
           # Limit RAM usage (default: 256MB)
           memory: ${DB_MEMORY_LIMIT:-256M}
+
+  storage:
+    image: minio/minio
+    command: server /data --console-address ":${MINIO_CONSOLE_PORT:-9001}" --address ":${MINIO_PORT:-9000}"
+    ports:
+     - "${STORAGE_PORT:-9000}:${STORAGE_PORT:-9000}"
+     - "${STORAGE_CONSOLE_PORT:-9001}:${STORAGE_CONSOLE_PORT:-9001}"
+    environment:
+      - MINIO_ROOT_USER=${STORAGE_ACCESS_KEY:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${STORAGE_SECRET_KEY:-minioadmin}
+    volumes:
+      - ./docker/minio/data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${STORAGE_PORT:-9000}/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
