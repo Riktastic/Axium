@@ -7,8 +7,6 @@
 ## Summary
 Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3, Redis, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
 
-The resulting executable (Windows) is about 
-
 ## Table of Contents
 - [🦖 Axium](#-axium)
   - [Summary](#summary)
