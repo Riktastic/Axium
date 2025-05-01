@@ -34,15 +34,51 @@ The shown commands except nano will work on Windows' PowerShell (you can use not
 
 ---
 
-4. **Edit the `.env` File**:
-   Update the `.env` file with your database settings if necessary:
+Axium can send emails for actions like user registration, password reset, etc. To configure the SMTP settings:
+
+4. **Edit the `.env` file**:
+   Copy the `.env.example` file to ``.env`.
+   Open your `.env` file and update the following mail-related environment variables:
    ```sh
    nano .env
    ```
 
+   Update the SMTP configuration with your provider's details:
+   ```env
+   MAIL_SERVER="smtp.example.com"  # Replace with your SMTP server
+   MAIL_PORT="587"  # Usually 587 for STARTTLS, 465 for SSL/TLS
+   MAIL_USER="your@email.com"  # Your email address or username
+   MAIL_PASS="your_smtp_password"  # Your SMTP password
+   ```
+
+   **Common Providers**:
+   - For **Gmail**, use:
+     ```env
+     MAIL_SERVER="smtp.gmail.com"
+     MAIL_PORT="587"
+     MAIL_USER="your.email@gmail.com"
+     MAIL_PASS="your_gmail_password_or_app_password"
+     ```
+
+   - For **SendGrid**, use:
+     ```env
+     MAIL_SERVER="smtp.sendgrid.net"
+     MAIL_PORT="587"
+     MAIL_USER="apikey"
+     MAIL_PASS="your_sendgrid_api_key"
+     ```
+
+   - For **Mailtrap** (for testing), use:
+     ```env
+     MAIL_SERVER="smtp.mailtrap.io"
+     MAIL_PORT="587"
+     MAIL_USER="your_mailtrap_username"
+     MAIL_PASS="your_mailtrap_password"
+     ```
+
 ---
 
-1. **Build and run the container**:
+5. **Build and run the container**:
    Start Axium using Docker Compose:
    ```sh
    docker compose up
@@ -52,6 +88,10 @@ The shown commands except nano will work on Windows' PowerShell (you can use not
 
 After sucessfully building the image, it will start two containers:
 - axium-axium-1: Axium,
-- axium-db-1: The PostgreSQL database.
+- axium-db-1: The PostgreSQL database,
+- axium-cache-1: The Redis cache instance,
+- axium-storage-1: The MinIO storage instance.
 
-The database will store its files within the `./docker` folder.
+The database, cache, storage databe will be stored within the `./docker/data` folder.
+
+If everything started up sucessfully you should be able to visit Axium using `http://127.0.0.1:8000`.

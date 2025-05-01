@@ -12,16 +12,63 @@ services:
 
     # Environment variables for the service
     environment:
-      # General Configuration
-      - ENVIRONMENT=${ENVIRONMENT:-development}
+      # ==============================
+      # ⚙️ GENERAL CONFIGURATION
+      # ==============================
+      - ENVIRONMENT=${ENVIRONMENT:-development} # "production"
 
-      # Server Configuration
+      # ==============================
+      # 🌍 SERVER CONFIGURATION
+      # ==============================
       - SERVER_IP=${SERVER_IP:-127.0.0.1}
       - SERVER_PORT=${SERVER_PORT:-8000}
       - SERVER_TRACE_ENABLED=${SERVER_TRACE_ENABLED:-true}
       - SERVER_WORKER_THREADS=${SERVER_WORKER_THREADS:-2}
 
-      # Database Configuration
+      # ==============================
+      # 🔒 HTTPS CONFIGURATION
+      # ==============================
+      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false}
+      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true}
+      - SERVER_HTTPS_CERT_FILE_PATH=${SERVER_HTTPS_CERT_FILE_PATH:-/app/certs/cert.pem}
+      - SERVER_HTTPS_KEY_FILE_PATH=${SERVER_HTTPS_KEY_FILE_PATH:-/app/certs/key.pem}
+
+      # ==============================
+      # 🚦 RATE LIMIT CONFIGURATION
+      # ==============================
+      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5}
+      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1}
+
+      # ==============================
+      # 📦 COMPRESSION CONFIGURATION
+      # ==============================
+      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true}
+      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6}
+
+      # ==============================
+      # 🔑 AUTHENTICATION CONFIGURATION
+      # ==============================
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-fgr4fe34w2rfTwfe3444234edfewfw4e#f$#wferg23w2DFSdf}
+      - JWT_ISSUER=${JWT_ISSUER:-your_issuer} # Set this to your desired issuer value
+      - JWT_AUDIENCE=${JWT_AUDIENCE:-your_audience} # Set this to your desired audience value
+      - JWT_ALLOW_COOKIE_AUTH=${JWT_ALLOW_COOKIE_AUTH:-true}
+      - JWT_FORCE_COOKIE_AUTH=${JWT_FORCE_COOKIE_AUTH:-false}
+      - JWT_COOKIE_NAME=${JWT_COOKIE_NAME:-auth_token}
+      - JWT_COOKIE_MAX_AGE=${JWT_COOKIE_MAX_AGE:-604800} # 7 days in seconds
+      - JWT_COOKIE_SAMESITE=${JWT_COOKIE_SAMESITE:-Lax}
+
+      # ==============================
+      # 🌐 CORS CONFIGURATION
+      # ==============================
+      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN:-http://127.0.0.1:3000}
+      - CORS_ALLOW_METHODS=${CORS_ALLOW_METHODS:-GET,POST,PUT,DELETE,OPTIONS}
+      - CORS_ALLOW_HEADERS=${CORS_ALLOW_HEADERS:-Authorization,Content-Type,Origin}
+      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
+      - CORS_MAX_AGE=${CORS_MAX_AGE:-3600}
+
+      # ==============================
+      # 🛢️ DATABASE CONFIGURATION
+      # ==============================
       - DATABASE_URL=${DATABASE_URL:-postgres://dbuser:1234@localhost/axium}
       - DATABASE_USER=${DATABASE_USER:-dbuser}
       - DATABASE_PASSWORD=${DATABASE_PASSWORD:-1234}
@@ -29,8 +76,10 @@ services:
       - DATABASE_MAX_CONNECTIONS=${DATABASE_MAX_CONNECTIONS:-20}
       - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5}
 
-      # Storage Configuration (MinIO/S3)
-      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://storage}
+      # ==============================
+      # ☁️ STORAGE (S3/MINIO) CONFIGURATION
+      # ==============================
+      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://127.0.0.1}
       - STORAGE_PORT=${STORAGE_PORT:-9000}
       - STORAGE_CONSOLE_PORT=${STORAGE_CONSOLE_PORT:-9001}
       - STORAGE_REGION=${STORAGE_REGION:-us-east-1}
@@ -38,43 +87,22 @@ services:
       - STORAGE_SECRET_KEY=${STORAGE_SECRET_KEY:-minioadmin}
       - STORAGE_BUCKET_PROFILE_PICTURES=${STORAGE_BUCKET_PROFILE_PICTURES:-profile-pictures}
 
-      # HTTPS Configuration
-      - SERVER_HTTPS_ENABLED=${SERVER_HTTPS_ENABLED:-false}
-      - SERVER_HTTPS_HTTP2_ENABLED=${SERVER_HTTPS_HTTP2_ENABLED:-true}
-      - SERVER_HTTPS_CERT_FILE_PATH=${SERVER_HTTPS_CERT_FILE_PATH:-/app/certs/cert.pem}
-      - SERVER_HTTPS_KEY_FILE_PATH=${SERVER_HTTPS_KEY_FILE_PATH:-/app/certs/key.pem}
-
-      # Rate Limit Configuration
-      - SERVER_RATE_LIMIT=${SERVER_RATE_LIMIT:-5}
-      - SERVER_RATE_LIMIT_PERIOD=${SERVER_RATE_LIMIT_PERIOD:-1}
-
-      # Compression Configuration
-      - SERVER_COMPRESSION_ENABLED=${SERVER_COMPRESSION_ENABLED:-true}
-      - SERVER_COMPRESSION_LEVEL=${SERVER_COMPRESSION_LEVEL:-6}
-
-      # Authentication Configuration (JWT)
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-Change me!}
-      - JWT_ISSUER=${JWT_ISSUER:-your_issuer}
-      - JWT_AUDIENCE=${JWT_AUDIENCE:-your_audience}
-      - JWT_ALLOW_COOKIE_AUTH=${JWT_ALLOW_COOKIE_AUTH:-true}
-      - JWT_FORCE_COOKIE_AUTH=${JWT_FORCE_COOKIE_AUTH:-false}
-      - JWT_COOKIE_NAME=${JWT_COOKIE_NAME:-auth_token}
-      - JWT_COOKIE_MAX_AGE=${JWT_COOKIE_MAX_AGE:-604800}
-      - JWT_COOKIE_SAMESITE=${JWT_COOKIE_SAMESITE:-Lax}
-
-      # CORS Configuration
-      - CORS_ALLOW_ORIGIN=${CORS_ALLOW_ORIGIN:-http://127.0.0.1:3000}
-      - CORS_ALLOW_METHODS=${CORS_ALLOW_METHODS:-GET,POST,PUT,DELETE,OPTIONS}
-      - CORS_ALLOW_HEADERS=${CORS_ALLOW_HEADERS:-Authorization,Content-Type,Origin}
-      - CORS_ALLOW_CREDENTIALS=${CORS_ALLOW_CREDENTIALS:-true}
-      - CORS_MAX_AGE=${CORS_MAX_AGE:-3600}
-
-      # Redis Configuration
-      - CACHE_ENDPOINT=${CACHE_ENDPOINT:-cache}
+      # ==============================
+      # 🟢 CACHE (REDIS) CONFIGURATION
+      # ==============================
+      - CACHE_ENDPOINT=${CACHE_ENDPOINT:-127.0.0.1}
       - CACHE_PORT=${CACHE_PORT:-6379}
       - CACHE_USERNAME=${CACHE_USERNAME:-}
       - CACHE_PASSWORD=${CACHE_PASSWORD:-}
       - CACHE_DB=${CACHE_DB:-0}
+
+      # ==============================
+      # 📧 MAIL (SMTP) CONFIGURATION
+      # ==============================
+      - MAIL_SERVER=${MAIL_SERVER:-smtp.example.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USER=${MAIL_USER:-your@email.com}
+      - MAIL_PASS=${MAIL_PASS:-your_smtp_password}
 
     # Depend on the database service and wait until it's healthy
     depends_on:
