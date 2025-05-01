@@ -254,7 +254,24 @@ impl From<UserRow> for UserInsertResponse {
     }
 }
 
-#[derive(Deserialize)]
-pub struct UserPasswordResetBody {
-    email: String,
+#[derive(Deserialize, ToSchema)]
+#[allow(dead_code)]
+pub struct UserPasswordResetRequestBody {
+    pub email: String,
+}
+
+#[derive(Deserialize, ToSchema)]
+#[allow(dead_code)]
+pub struct UserPasswordResetConfirmBody {
+    pub email: String,
+    pub code: String,
+    pub new_password: String,
+}
+
+#[derive(Debug, Clone, ToSchema)]
+#[allow(dead_code)]
+pub struct UserPasswordResetCode {
+    pub user_id: Uuid,
+    pub code: String,
+    pub expires_at: NaiveDateTime,
 }

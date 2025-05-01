@@ -4,6 +4,7 @@ use crate::models::user::*;
 use regex::Regex;
 use sqlx::Error;
 use validator::Validate;
+use chrono::{DateTime, Utc};
 
 /// Retrieves all users with security considerations
 ///
@@ -355,5 +356,116 @@ pub async fn update_user_in_db(
     let query = builder.build();
     query.execute(pool).await?;
 
+    Ok(())
+}
+
+/// Inserts a password reset code for a user into the database.
+///
+/// # Arguments
+/// - `pool`: Reference to the PostgreSQL connection pool.
+/// - `user_id`: The UUID of the user.
+/// - `code`: The password reset code (should be unique).
+/// - `expires_at`: The UTC datetime when the code expires.
+///
+/// # Returns
+/// - `Ok(())` on success.
+/// - `Err(Error)` on failure.
+pub async fn insert_user_password_reset_code_into_db(
+    pool: &PgPool,
+    user_id: Uuid,
+    code: &str,
+    expires_at: DateTime<Utc>,
+) -> Result<(), Error> {
+    let expires_at_naive = expires_at.naive_utc();
+    sqlx::query!(
+        r#"
+        INSERT INTO users_password_reset_codes (user_id, code, expires_at)
+        VALUES ($1, $2, $3)
+        ON CONFLICT (code) DO UPDATE
+            SET user_id = EXCLUDED.user_id,
+                expires_at = EXCLUDED.expires_at
+        "#,
+        user_id,
+        code,
+        expires_at_naive
+    )
+    .execute(pool)
+    .await?; 
+
+    Ok(())
+}
+
+/// Updates the user's password hash in the database.
+///
+/// # Arguments
+/// - `pool`: The database connection pool.
+/// - `user_id`: The user's UUID.
+/// - `new_password_hash`: The new hashed password.
+///
+/// # Returns
+/// - `Ok(())` on success.
+/// - `Err(sqlx::Error)` on failure.
+pub async fn update_user_password_in_db(
+    pool: &PgPool,
+    user_id: Uuid,
+    new_password_hash: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "UPDATE users SET password_hash = $1 WHERE id = $2",
+        new_password_hash,
+        user_id
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Fetches the current (unexpired) password reset code for a user.
+///
+/// Returns `Ok(Some(UserPasswordResetCode))` if a code exists and is not expired,
+/// `Ok(None)` if not found or expired, or `Err(sqlx::Error)` on DB error.
+pub async fn fetch_current_password_reset_code_from_db(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<Option<UserPasswordResetCode>, sqlx::Error> {
+    let now = chrono::Utc::now().naive_utc();
+    sqlx::query_as!(
+        UserPasswordResetCode,
+        r#"
+        SELECT 
+            user_id as "user_id!",
+            code,
+            expires_at as "expires_at!"
+        FROM users_password_reset_codes
+        WHERE user_id = $1 AND expires_at > $2
+        ORDER BY expires_at DESC
+        LIMIT 1
+        "#,
+        user_id,
+        now
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+/// Deletes all password reset codes for the specified user.
+///
+/// # Arguments
+/// - `pool`: Reference to the PostgreSQL connection pool.
+/// - `user_id`: The UUID of the user.
+///
+/// # Returns
+/// - `Ok(())` on success.
+/// - `Err(sqlx::Error)` on database error.
+pub async fn delete_all_password_reset_codes_for_user(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "DELETE FROM users_password_reset_codes WHERE user_id = $1",
+        user_id
+    )
+    .execute(pool)
+    .await?;
     Ok(())
 }

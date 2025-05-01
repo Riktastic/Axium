@@ -8,15 +8,19 @@ use tracing::instrument;
 use validator::Validate;
 use uuid::Uuid;
 use std::sync::Arc;
+use rand::Rng;
+use rand::distributions::Alphanumeric;
+use chrono::Utc;
+use chrono::Duration;
 
-use crate::utils::auth::{hash_password, generate_totp_secret};
+use crate::{core::config::{get_env, get_env_bool, get_env_with_default}, utils::auth::{generate_totp_secret, hash_password}};
 use crate::utils::process_image::process_image;
-use crate::database::users::{insert_user_into_db, update_user_profile_picture_in_db, fetch_profile_picture_url_from_db};
+use crate::database::users::{insert_user_into_db, update_user_profile_picture_in_db, fetch_profile_picture_url_from_db, fetch_user_by_email_from_db, insert_user_password_reset_code_into_db, update_user_password_in_db, fetch_current_password_reset_code_from_db, delete_all_password_reset_codes_for_user};
 use crate::storage::upload::upload_to_storage;
 use crate::storage::delete::delete_from_storage;
-use crate::models::user::{UserInsertResponse, UserInsertBody, UserProfilePictureUploadBody, ProfilePictureUploadResponse, User};
+use crate::models::user::{UserInsertResponse, UserInsertBody, UserProfilePictureUploadBody, UserProfilePictureUploadResponse, UserPasswordResetRequestBody, UserPasswordResetConfirmBody, User};
 use crate::routes::AppState;
-use crate::core::config::{get_env, get_env_with_default};
+use crate::mail::send::send_mail;
 
 // --- Route Handler ---
 
@@ -81,7 +85,7 @@ pub async fn post_user(
     security(("jwt_token" = [])),
     request_body = UserProfilePictureUploadBody,
     responses(
-        (status = 200, description = "Profile picture uploaded successfully", body = ProfilePictureUploadResponse),
+        (status = 200, description = "Profile picture uploaded successfully", body = UserProfilePictureUploadResponse),
         (status = 400, description = "Bad request, invalid UUID or no file uploaded", body = String),
         (status = 403, description = "Forbidden, insufficient permissions", body = serde_json::Value),
         (status = 500, description = "Internal server error, file upload or database issue", body = String)
@@ -120,7 +124,7 @@ pub async fn post_user_profilepicture(
 
     let bucket = get_env_with_default("STORAGE_BUCKET_PROFILE_PICTURES", "profile_pictures");
     let endpoint = get_env("STORAGE_ENDPOINT");
-    let debug = std::env::var("IMAGE_DEBUG").is_ok();
+    let debug = get_env_bool("IMAGE_DEBUG", false);
 
     // Check existing profile picture
     if let Some(old_url) = fetch_profile_picture_url_from_db(&state.database, user_id)
@@ -228,4 +232,139 @@ pub async fn post_user_profilepicture(
         StatusCode::BAD_REQUEST,
         Json(json!({ "error": "No file uploaded" })),
     ))
+}
+
+#[utoipa::path(
+    post,
+    path = "/users/password-reset",
+    tag = "user",
+    security(("jwt_token" = [])),  // If you want to secure the route with JWT authentication, add this
+    request_body = UserPasswordResetRequestBody,
+    responses(
+        (status = 200, description = "Password reset code sent successfully", body = String),
+        (status = 400, description = "Bad request, invalid email format", body = String),
+        (status = 404, description = "User not found", body = String),
+        (status = 500, description = "Internal server error, database or email issue", body = String)
+    )
+)]
+pub async fn post_user_password_reset(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<UserPasswordResetRequestBody>,
+) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
+    // 1. Find user by email
+    let user = match fetch_user_by_email_from_db(&state.database, &body.email).await {
+        Ok(Some(user)) => user,
+        Ok(None) => return Ok(StatusCode::OK), // Don't reveal if email exists
+        Err(_) => return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Database error"})))),
+    };
+
+    // 2. Generate code and expiry
+    let code: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect();
+    let expires_at = Utc::now() + Duration::hours(24);
+
+    // 3. Store code in DB
+    insert_user_password_reset_code_into_db(&state.database, user.id, &code, expires_at)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to store reset code"}))))?;
+
+    // 4. Send email
+    let subject = "Password reset request";
+    let body = format!(
+        "Use this code to reset your password: {}\n\nThis code will expire in 24 hours.",
+        code
+    );
+    send_mail(&state.mail, &user.email, subject, &body)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({"error": "Failed to send email"}))))?;
+
+    Ok(StatusCode::OK)
+}
+
+#[utoipa::path(
+    post,
+    path = "/users/password-reset/confirm",
+    tag = "user",
+    security(("jwt_token" = [])),  // If you want to secure the route with JWT authentication, add this
+    request_body = UserPasswordResetConfirmBody,
+    responses(
+        (status = 200, description = "Password reset successful", body = String),
+        (status = 400, description = "Bad request, invalid code or email", body = String),
+        (status = 404, description = "User not found", body = String),
+        (status = 400, description = "Invalid or expired reset code", body = String),
+        (status = 500, description = "Internal server error, database issue", body = String)
+    )
+)]
+#[instrument(skip(state, body))]
+pub async fn post_user_password_reset_confirm(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<UserPasswordResetConfirmBody>,
+) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
+    // 1. Validate new password (example: at least 8 chars)
+    if body.new_password.len() < 8 {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": "Password must be at least 8 characters long." }))
+        ));
+    }
+
+    // 2. Find user by email
+    let user = match fetch_user_by_email_from_db(&state.database, &body.email).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            // Don't reveal if email exists or not
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "Invalid code or email." }))
+            ));
+        }
+        Err(_) => {
+            return Err((
+                StatusCode::INTERNAL_SERVER_ERROR,
+                Json(json!({ "error": "Database error." }))
+            ));
+        }
+    };
+
+    // 3. Fetch and verify reset code
+    #[allow(unused_variables)] // Currently not needed for further processing
+    let reset_code = match fetch_current_password_reset_code_from_db(&state.database, user.id).await {
+        Ok(Some(code)) => {
+            // Check if the reset code from the database matches the provided code
+            if code.code == body.code {
+                // The reset code is valid
+                // Proceed with the next steps
+            } else {
+                return Err((
+                    StatusCode::BAD_REQUEST,
+                    Json(json!({ "error": "Invalid or expired code." }))
+                ));
+            }
+        },
+        _ => {
+            // If no code was found or there's an error, return an invalid code response
+            return Err((
+                StatusCode::BAD_REQUEST,
+                Json(json!({ "error": "Invalid or expired code." }))
+            ));
+        }
+    };
+        
+
+    // 4. Hash new password
+    let new_password_hash = hash_password(&body.new_password)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to hash password." }))))?;
+
+    // 5. Update user's password
+    update_user_password_in_db(&state.database, user.id, &new_password_hash).await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to update password." }))))?;
+
+    // 6. Invalidate the reset code
+    delete_all_password_reset_codes_for_user(&state.database, user.id).await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to invalidate reset code." }))))?;
+
+    Ok(StatusCode::OK)
 }

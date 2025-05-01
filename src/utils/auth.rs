@@ -1,5 +1,4 @@
 // Imports grouped by functionality
-use std::env;
 use axum::http::{StatusCode, Request};
 use axum::body::Body;
 use argon2::{

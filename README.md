@@ -184,6 +184,8 @@ axium/                              # Root project directory
 | **User routes**                          |               |                   |                                                                  |
 | GET    | `/users/all`                    | ✅            | ✅                | Get all users.                                                   |
 | POST   | `/users/`                       | ✅            | ✅                | Create a new user.                                               |
+| POST   | `/users/password-reset`           | 🚫            | 🚫                | Request a password reset code to be sent to the user's email.    |
+| POST   | `/users/password-reset/confirm`   | 🚫            | 🚫                | Confirm password reset with code and set new password.           |
 | POST   | `/users/{id}/profile-picture`   | ✅            | 🚫/✅ (see below)  | Upload or update a user's profile picture. Will be converted to WebP, cropped to 300x300, max 10 MB, Admins can upload for others. |
 | PATCH  | `/users/{id}`                   | ✅            | 🚫/✅ (see below)  | Update user profile fields (self or admin for others).           |
 | GET    | `/users/current`                | ✅            | 🚫                | Get the current user.                                            |

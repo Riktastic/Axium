@@ -1,4 +1,4 @@
-use lettre::{AsyncSmtpTransport, Tokio1Executor, AsyncTransport, Message, message::{header, MultiPart, SinglePart}};
+use lettre::{AsyncTransport, Message, message::{header, MultiPart, SinglePart}};
 use thiserror::Error;
 use once_cell::sync::OnceCell;
 use std::sync::Arc;
