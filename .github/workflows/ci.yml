@@ -1,0 +1,40 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Rust
+        uses: actions/setup-rust@v1
+        with:
+          rust-version: stable
+
+      - name: Install dependencies
+        run: cargo build --release
+
+      - name: Run tests
+        run: cargo test --release
+
+      - name: Install coverage tools
+        run: cargo install cargo-tarpaulin
+
+      - name: Run coverage report
+        run: cargo tarpaulin --all --out Coveralls
+
+      - name: Upload coverage to Coveralls
+        env:
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+        run: |
+          curl -s https://coveralls.io/github/Riktastic/Axium?service=github-actions&token=${{ secrets.COVERALLS_REPO_TOKEN }} -d coverage=@coverage.json

@@ -1,6 +1,10 @@
 # 🦖 Axium
-**An example API built with Rust, Axum, SQLx, S3, Redis, and PostgreSQL.**  
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+**An example API built with Rust, Axum, SQLx, S3, Redis, and PostgreSQL.** 
+![GitHub last commit](https://img.shields.io/github/last-commit/Riktastic/Axium)
+![GitHub commit activity](https://img.shields.io/github/commit-activity/w/Riktastic/Axium)
+![GitHub last commit](https://img.shields.io/github/last-commit/Riktastic/Axium)
+[![Coverage Status](https://coveralls.io/repos/github/Riktastic/Axium/badge.svg?branch=main)](https://coveralls.io/github/Riktastic/Axium?branch=main)
+![License](https://img.shields.io/crates/l/axium)
 
 > ⚠️ **Warning:** This project is under active development. Pushed changes have been tested. But it might not yet be production ready.
 
