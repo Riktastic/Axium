@@ -8,6 +8,7 @@ use core::{config, server};
 mod database;
 mod storage;
 mod cache;
+mod mail;
 mod routes;
 mod models;
 mod middlewares;

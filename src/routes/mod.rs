@@ -14,8 +14,9 @@ use utoipa_swagger_ui::SwaggerUi;
 
 // Application state structure
 use sqlx::PgPool;
-use aws_sdk_s3::Client as S3Client;
+use aws_sdk_s3::Client as S3Client; // S3 connection client
 use deadpool_redis::Pool as RedisPool;  // Redis connection pool
+use lettre::{AsyncSmtpTransport, Tokio1Executor}; // SmtpTransport for sending emails
 use std::sync::Arc;  // For thread-safe reference counting
 
 pub mod handlers {
@@ -44,6 +45,7 @@ pub struct AppState {
     pub database: PgPool,
     pub storage: S3Client,
     pub cache: RedisPool,
+    pub mail: AsyncSmtpTransport<Tokio1Executor>,
 }
 
 #[allow(dead_code)] // Not sure why, but rust-analyzer is complaining about this. While Utoipa uses it.

@@ -11,6 +11,8 @@ use tower_http::cors::{CorsLayer, AllowCredentials};
 use crate::database::connect::connect_to_database;  // Function to connect to the database
 use crate::database::connect::run_database_migrations;  // Function to run database migrations
 use crate::storage::connect::connect_to_storage;  // Function to connect to storage
+use crate::cache::connect::connect_to_cache;  // Function to connect to cache
+use crate::mail::connect::connect_to_mail;  // Function to connect to mail service  
 use crate::config;  // Environment configuration helper
 use crate::routes::create_routes;  // Function to create application routes
 
@@ -35,11 +37,16 @@ pub async fn create_server() -> Router<()> {
     println!("✔️   Connected to storage.");
 
     // === Cache Setup ===
-    let cache = crate::cache::connect::connect_to_cache().await
+    let cache = connect_to_cache().await
         .expect("❌  Failed to connect to cache.");
     println!("✔️   Connected to cache.");
 
-    let shared_state = Arc::new(AppState { database: database, storage: storage, cache: cache });
+    // === Mail Setup ===
+    let mail = connect_to_mail().await
+        .expect("❌  Failed to connect to mail.");
+    println!("✔️   Connected to mail.");
+
+    let shared_state = Arc::new(AppState { database: database, storage: storage, cache: cache, mail: mail });
 
     // === Application Routes ===
     let mut app = create_routes(shared_state);

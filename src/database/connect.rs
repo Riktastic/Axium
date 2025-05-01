@@ -8,6 +8,7 @@ use thiserror::Error;
 // ---------------------------
 
 #[derive(Debug, Error)]
+#[allow(dead_code)]
 pub enum DatabaseError {
     #[error("❌  Environment error: {0}")]
     EnvError(String),
