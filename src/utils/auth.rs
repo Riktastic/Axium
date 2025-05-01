@@ -24,10 +24,7 @@ lazy_static! {
         .time_to_live(std::time::Duration::from_secs(300))  // 5 minutes
         .build();
 
-    static ref SECRET_KEY: String = env::var("JWT_SECRET_KEY").unwrap_or_else(|_| {
-        error!("JWT_SECRET_KEY not set in environment variables.");
-        panic!("JWT_SECRET_KEY is required.");
-    });
+    static ref SECRET_KEY: String = get_env("JWT_SECRET_KEY");
 }
 
 // Password hashing and verification
@@ -117,13 +114,7 @@ pub fn encode_jwt(email: String) -> Result<String, StatusCode> {
 
 #[instrument(skip(jwt))]
 pub fn decode_jwt(jwt: String) -> Result<TokenData<Claims>, AuthError> {
-    let secret_key = env::var("JWT_SECRET_KEY").map_err(|_| {
-        error!("JWT_SECRET_KEY not set in environment variables");
-        AuthError {
-            message: "Server misconfiguration.".to_string(),
-            status_code: StatusCode::INTERNAL_SERVER_ERROR,
-        }
-    })?;
+    let secret_key = get_env("JWT_SECRET_KEY");
 
     // Get issuer and audience from environment variables
     let issuer = get_env("JWT_ISSUER"); // Fetching the issuer from environment variables

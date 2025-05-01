@@ -2,6 +2,9 @@ use lettre::transport::smtp::authentication::Credentials;
 use lettre::{AsyncSmtpTransport, Tokio1Executor, Message, AsyncTransport};
 use thiserror::Error;
 
+use crate::core::config::{get_env, get_env_with_default};
+use crate::mail::MailerState;
+
 #[derive(Debug, Error)]
 #[allow(dead_code)]
 pub enum SmtpError {
@@ -13,11 +16,11 @@ pub enum SmtpError {
     OperationError(String),
 }
 
-pub async fn connect_to_mail() -> Result<AsyncSmtpTransport<Tokio1Executor>, SmtpError> {
-    let smtp_server = std::env::var("MAIL_SERVER").map_err(|e| SmtpError::EnvError(e.to_string()))?;
-    let smtp_port = std::env::var("MAIL_PORT").unwrap_or_else(|_| "587".to_string());
-    let smtp_user = std::env::var("MAIL_USER").map_err(|e| SmtpError::EnvError(e.to_string()))?;
-    let smtp_pass = std::env::var("MAIL_PASS").map_err(|e| SmtpError::EnvError(e.to_string()))?;
+pub async fn connect_to_mail() -> Result<MailerState, SmtpError> {
+    let smtp_server = get_env("MAIL_SERVER");
+    let smtp_port = get_env_with_default("MAIL_PORT", "587");
+    let smtp_user = get_env("MAIL_USER");
+    let smtp_pass = get_env("MAIL_PASS");
 
     let creds = Credentials::new(smtp_user.clone(), smtp_pass);
 
@@ -39,7 +42,10 @@ pub async fn connect_to_mail() -> Result<AsyncSmtpTransport<Tokio1Executor>, Smt
     match mailer.send(test_email).await {
         Ok(_) => {
             println!("Test email sent successfully.");
-            Ok(mailer) // Return the SMTP mailer if the email was sent successfully
+            Ok(MailerState {
+                mailer,
+                username: smtp_user,
+            })
         }
         Err(e) => Err(SmtpError::OperationError(format!("Failed to send test email: {}", e))),
     }

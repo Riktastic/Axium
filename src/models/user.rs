@@ -171,7 +171,7 @@ pub struct UserProfilePictureUploadBody {
 }
 
 #[derive(Debug, Serialize, ToSchema)]
-pub struct ProfilePictureUploadResponse {
+pub struct UserProfilePictureUploadResponse {
     pub url: String,
 }
 
@@ -252,4 +252,9 @@ impl From<UserRow> for UserInsertResponse {
     fn from(row: UserRow) -> Self {
         UserInsertResponse::from(User::from(row))
     }
+}
+
+#[derive(Deserialize)]
+pub struct UserPasswordResetBody {
+    email: String,
 }

@@ -1,6 +1,7 @@
 use dotenvy::dotenv;
 use sqlx::{PgPool, migrate::Migrator, migrate::MigrateError, postgres::PgPoolOptions};
-use std::{env, fs, path::Path, time::Duration};
+use std::{fs, path::Path, time::Duration};
+use crate::core::config::{get_env, get_env_with_default};
 use thiserror::Error;
 
 // ---------------------------
@@ -45,9 +46,7 @@ pub async fn connect_to_database() -> Result<PgPool, DatabaseError> {
     dotenv().ok();
     
     // Validate database URL presence and format
-    let database_url = env::var("DATABASE_URL")
-        .map_err(|_| DatabaseError::EnvError("DATABASE_URL not found".to_string()))?;
-    
+    let database_url = get_env("DATABASE_URL");
     if !database_url.starts_with("postgres://") {
         return Err(DatabaseError::ConfigError(
             "❌  Invalid DATABASE_URL format - must start with postgres://".to_string()
@@ -55,8 +54,8 @@ pub async fn connect_to_database() -> Result<PgPool, DatabaseError> {
     }
 
     // Configure connection pool with safety defaults
-    let max_connections = parse_env_var("DATABASE_MAX_CONNECTIONS", 10)?;
-    let min_connections = parse_env_var("DATABASE_MIN_CONNECTIONS", 2)?;
+    let max_connections: u32 = get_env("DATABASE_MAX_CONNECTIONS").parse().unwrap_or(10);
+    let min_connections: u32 = get_env("DATABASE_MIN_CONNECTIONS").parse().unwrap_or(2);
 
     let pool = PgPoolOptions::new()
         .max_connections(max_connections)
@@ -71,18 +70,6 @@ pub async fn connect_to_database() -> Result<PgPool, DatabaseError> {
     Ok(pool)
 }
 
-/// Helper function to safely parse environment variables
-fn parse_env_var<T: std::str::FromStr>(name: &str, default: T) -> Result<T, DatabaseError> 
-where
-    T::Err: std::fmt::Display,
-{
-    match env::var(name) {
-        Ok(val) => val.parse().map_err(|e| DatabaseError::ConfigError(
-            format!("❌  Invalid {} value: {}", name, e)
-        )),
-        Err(_) => Ok(default),
-    }
-}
 
 // ---------------------------
 // Database Migrations
@@ -126,9 +113,10 @@ pub async fn run_database_migrations(pool: &PgPool) -> Result<(), DatabaseError>
         .map_err(|e| DatabaseError::MigrationError(e))?;
 
     // Skip migrations execution in production, just print a message
-    if env::var("ENVIRONMENT").unwrap_or_else(|_| "development".into()) == "production" {
+    let environment = get_env_with_default("ENVIRONMENT", "development");
+    if environment == "production" {
         println!("🛑  Migration execution skipped in production.");
-        return Ok(()); // Return early without error
+        return Ok(());
     }
 
     // Execute migrations in transaction if supported

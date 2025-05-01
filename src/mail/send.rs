@@ -6,6 +6,8 @@ use tokio::fs;
 use html2text;
 use html_escape;
 
+use crate::mail::MailerState;
+
 #[allow(dead_code)]
 #[derive(Debug, Error)]
 pub enum SmtpError {
@@ -40,12 +42,14 @@ async fn get_footer_html() -> Result<Arc<String>, SmtpError> {
 /// * `subject` - The email subject.
 /// * `body` - The plain text body of the email.
 pub async fn send_mail(
-    mailer: &AsyncSmtpTransport<Tokio1Executor>,
-    from: &str,
+    mailer_state: &MailerState,
     to: &str,
     subject: &str,
     body: &str,
 ) -> Result<(), SmtpError> {
+    let from = &mailer_state.username;
+    let mailer = &mailer_state.mailer;
+
     // Load the footer (cached after first load)
     let html_footer = get_footer_html().await?;
 
