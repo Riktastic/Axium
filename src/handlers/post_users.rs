@@ -15,10 +15,10 @@ use chrono::Duration;
 
 use crate::{core::config::{get_env, get_env_bool, get_env_with_default}, utils::auth::{generate_totp_secret, hash_password}};
 use crate::utils::process_image::process_image;
-use crate::database::users::{insert_user_into_db, update_user_profile_picture_in_db, fetch_profile_picture_url_from_db, fetch_user_by_email_from_db, insert_user_password_reset_code_into_db, update_user_password_in_db, fetch_current_password_reset_code_from_db, delete_all_password_reset_codes_for_user};
+use crate::database::users::{insert_user_into_db, update_user_profile_picture_in_db, fetch_profile_picture_url_from_db, fetch_user_by_email_from_db, insert_user_password_reset_code_into_db, update_user_password_in_db, fetch_current_password_reset_code_from_db, delete_all_password_reset_codes_for_user, check_user_exists_in_db, fetch_pending_user_by_email_from_db, activate_user_in_db, insert_pending_user_into_db};
 use crate::storage::upload::upload_to_storage;
 use crate::storage::delete::delete_from_storage;
-use crate::models::user::{UserInsertResponse, UserInsertBody, UserProfilePictureUploadBody, UserProfilePictureUploadResponse, UserPasswordResetRequestBody, UserPasswordResetConfirmBody, User};
+use crate::models::user::{UserInsertResponse, UserInsertBody, UserProfilePictureUploadBody, UserProfilePictureUploadResponse, UserPasswordResetRequestBody, UserPasswordResetConfirmBody, UserRegisterBody, UserRegisterEmailVerifyBody, User};
 use crate::routes::AppState;
 use crate::mail::send::send_mail;
 
@@ -63,10 +63,10 @@ pub async fn post_user(
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to hash password." }))))?;
 
     // Generate TOTP secret if totp is Some("true")
-    let totp_secret = if user.totp.as_deref() == Some("true") {
+    let totp_secret = if user.totp.unwrap_or(false) {
         generate_totp_secret()
     } else {
-        String::new() // or some other default value
+        String::new() // or None, or whatever default you want
     };
 
     match insert_user_into_db(&state.database, &user.username, &user.email, &hashed_password, &totp_secret, 1, 1).await {
@@ -236,7 +236,7 @@ pub async fn post_user_profilepicture(
 
 #[utoipa::path(
     post,
-    path = "/users/password-reset",
+    path = "/reset",
     tag = "user",
     security(("jwt_token" = [])),  // If you want to secure the route with JWT authentication, add this
     request_body = UserPasswordResetRequestBody,
@@ -286,7 +286,7 @@ pub async fn post_user_password_reset(
 
 #[utoipa::path(
     post,
-    path = "/users/password-reset/confirm",
+    path = "/reset/verify",
     tag = "user",
     security(("jwt_token" = [])),  // If you want to secure the route with JWT authentication, add this
     request_body = UserPasswordResetConfirmBody,
@@ -299,7 +299,7 @@ pub async fn post_user_password_reset(
     )
 )]
 #[instrument(skip(state, body))]
-pub async fn post_user_password_reset_confirm(
+pub async fn post_user_password_reset_verify(
     State(state): State<Arc<AppState>>,
     Json(body): Json<UserPasswordResetConfirmBody>,
 ) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
@@ -365,6 +365,141 @@ pub async fn post_user_password_reset_confirm(
     // 6. Invalidate the reset code
     delete_all_password_reset_codes_for_user(&state.database, user.id).await
         .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to invalidate reset code." }))))?;
+
+    Ok(StatusCode::OK)
+}
+
+#[utoipa::path(
+    post,
+    path = "/register",
+    tag = "user",
+    request_body = UserRegisterBody,
+    responses(
+        (status = 200, description = "Registration successful, verification email sent", body = String),
+        (status = 400, description = "Invalid input", body = String),
+        (status = 409, description = "User/email already exists", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    )
+)]
+pub async fn post_user_register(
+    State(state): State<Arc<AppState>>,
+    Json(user): Json<UserRegisterBody>,
+) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
+    // Validate input
+    if let Err(errors) = user.validate() {
+        let error_messages: Vec<String> = errors
+            .field_errors()
+            .iter()
+            .flat_map(|(_, errors)| errors.iter().map(|e| e.message.clone().unwrap_or_default().to_string()))
+            .collect();
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "error": error_messages.join(", ") }))
+        ));
+    }
+
+    // Check if user/email exists
+    if check_user_exists_in_db(&state.database, &user.email, &user.username)
+    .await
+    .map_err(|e| {
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            Json(json!({ "error": format!("Database error: {e}") }))
+        )
+    })?
+    {
+        return Err((
+            StatusCode::CONFLICT,
+            Json(json!({ "error": "User or email already exists." }))
+        ));
+    }
+
+    // Hash password
+    let hashed_password = hash_password(&user.password)
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to hash password." }))))?;
+
+    // Generate TOTP secret if requested
+    let totp_secret = if user.totp.unwrap_or(false) {
+        Some(generate_totp_secret())
+    } else {
+        None
+    };
+
+    // Generate verification code
+    let code: String = rand::thread_rng()
+        .sample_iter(&Alphanumeric)
+        .take(32)
+        .map(char::from)
+        .collect();
+    let expires_at = Utc::now() + Duration::hours(24);
+
+    // Insert user in "pending" state
+    insert_pending_user_into_db(
+        &state.database,
+        &user.username,
+        &user.email,
+        &hashed_password,
+        &code,
+        expires_at,
+        user.first_name.as_deref(),
+        user.last_name.as_deref(),
+        user.country_code.as_deref(),
+        user.language_code.as_deref(),
+        user.birthday,
+        user.description.as_deref(),
+        totp_secret.as_deref()
+    ).await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to create user." }))))?;
+
+    // Send verification email
+    let subject = "Verify your email";
+    let body = format!(
+        "Welcome! Please verify your email by using this code: {}\n\nThis code will expire in 24 hours.",
+        code
+    );
+    send_mail(&state.mail, &user.email, subject, &body)
+        .await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to send verification email." }))))?;
+
+    Ok(StatusCode::OK)
+}
+
+#[utoipa::path(
+    post,
+    path = "/register/verify",
+    tag = "user",
+    request_body = UserRegisterEmailVerifyBody,
+    responses(
+        (status = 200, description = "Email verified successfully", body = String),
+        (status = 400, description = "Invalid code or email", body = String),
+        (status = 404, description = "User not found", body = String),
+        (status = 410, description = "Verification code expired", body = String),
+        (status = 500, description = "Internal server error", body = String)
+    )
+)]
+pub async fn post_user_register_verify(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<UserRegisterEmailVerifyBody>,
+) -> Result<StatusCode, (StatusCode, Json<serde_json::Value>)> {
+    // 1. Find user by email
+    let user = match fetch_pending_user_by_email_from_db(&state.database, &body.email).await {
+        Ok(Some(user)) => user,
+        Ok(None) => return Err((StatusCode::NOT_FOUND, Json(json!({ "error": "User not found." })))),
+        Err(_) => return Err((StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Database error." })))),
+    };
+
+    // 2. Check code and expiry
+    if user.verification_code.as_deref() != Some(body.code.as_str()) {
+        return Err((StatusCode::BAD_REQUEST, Json(json!({ "error": "Invalid code." }))));
+    }
+
+    if user.verification_expires_at.is_none() || Utc::now() > user.verification_expires_at.unwrap() {
+        return Err((StatusCode::GONE, Json(json!({ "error": "Verification code expired." }))));
+    }
+
+    // 3. Activate user
+    activate_user_in_db(&state.database, user.id).await
+        .map_err(|_| (StatusCode::INTERNAL_SERVER_ERROR, Json(json!({ "error": "Failed to activate user." }))))?;
 
     Ok(StatusCode::OK)
 }

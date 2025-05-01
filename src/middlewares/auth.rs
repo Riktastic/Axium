@@ -17,7 +17,7 @@ use tokio::time::interval;
 use chrono::Utc;
 
 // Importing custom database query functions
-use crate::database::users::fetch_user_by_email_from_db;
+use crate::database::users::fetch_active_user_by_email_from_db;
 
 use crate::models::auth::AuthError; // Import the AuthError struct for error handling
 use crate::utils::auth::{decode_jwt, extract_token_from_header, extract_token_from_cookie};
@@ -126,7 +126,7 @@ pub async fn authorize(
     let token_data = decode_jwt(token)?;
 
     // Fetch the user from the database using the email from the decoded token
-    let current_user = fetch_user_by_email_from_db(&database, &token_data.claims.sub).await
+    let current_user = fetch_active_user_by_email_from_db(&database, &token_data.claims.sub).await
         .map_err(|_| AuthError {
             message: "Unauthorized user.".to_string(),
             status_code: StatusCode::UNAUTHORIZED,

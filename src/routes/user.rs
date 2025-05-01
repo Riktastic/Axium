@@ -4,7 +4,7 @@ use std::sync::Arc;
 
 use crate::handlers::{
     get_users::{get_all_users, get_users_by_id},
-    post_users::{post_user, post_user_profilepicture, post_user_password_reset, post_user_password_reset_confirm},
+    post_users::{post_user, post_user_profilepicture, post_user_password_reset, post_user_password_reset_verify, post_user_register, post_user_register_verify},
     patch_users::patch_user_profile,
     delete_users::delete_user_by_id
 };
@@ -19,8 +19,13 @@ pub fn create_user_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         // Route for requesting a password reset (unauthenticated)
         .unauthenticated_post("/password-reset", post_user_password_reset)
         // Route for confirming password reset (unauthenticated)
-        .unauthenticated_post("/password-reset/confirm", post_user_password_reset_confirm)
-        // Route for getting user by email (requires role 2)
+        .unauthenticated_post("/password-reset/confirm", post_user_password_reset_verify)
+
+        // Route for requesting a password reset (unauthenticated)
+        .unauthenticated_post("/register", post_user_register)
+        // Route for confirming password reset (unauthenticated)
+        .unauthenticated_post("/register/confirm", post_user_register_verify)
+
         // Route for adding profile pictures.
         .post("/{id}/profile-picture", post_user_profilepicture, vec![1, 2]) 
         // Route for getting user by ID (requires roles 1 or 2)
@@ -29,5 +34,19 @@ pub fn create_user_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
         .patch("/{id}", patch_user_profile, vec![1, 2])
         // Route for deleting a user by ID (requires role 2)
         .delete("/{id}", delete_user_by_id, vec![2])
+        .build()
+}
+
+pub fn create_user_root_routes(state: Arc<AppState>) -> Router<Arc<AppState>> {
+    AuthenticatedRouteBuilder::new(state)
+        // Route for requesting a password reset (unauthenticated)
+        .unauthenticated_post("/reset", post_user_password_reset)
+        // Route for confirming password reset (unauthenticated)
+        .unauthenticated_post("/reset/verify", post_user_password_reset_verify)
+
+        // Route for requesting a password reset (unauthenticated)
+        .unauthenticated_post("/register", post_user_register)
+        // Route for confirming password reset (unauthenticated)
+        .unauthenticated_post("/register/verify", post_user_register_verify)
         .build()
 }

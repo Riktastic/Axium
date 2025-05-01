@@ -64,6 +64,15 @@ If you encounter a bug or issue, please check if it has already been reported in
 - Expected vs. actual behavior.
 - Any relevant logs or error messages.
 
+## 📝 To-Do:
+Things to work on.
+
+- Check the register handlers and the insert user handlers for possible security risks,
+- Remove almost duplicate user manipulation database functions,
+- Check the authorize middleware for possible security risks,
+- Simplify the user models.
+
+
 ### 💬 Discussion
 
 Feel free to open discussions in the [Discussions](https://github.com/Riktastic/Axium/discussions) section for general questions, ideas, or advice on how to improve the project.

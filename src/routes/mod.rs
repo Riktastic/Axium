@@ -31,7 +31,7 @@ use crate::utils::global_error_handler::global_error_handler;  // Global error h
 
 use self::{
     todo::create_todo_routes,
-    user::create_user_routes,
+    user::{create_user_root_routes, create_user_routes},
     apikey::create_apikey_routes,
     usage::create_usage_routes,
     auth::create_auth_routes,
@@ -83,7 +83,7 @@ impl Modify for SecurityAddon {
     ),
     paths(
         handlers::get_users::get_all_users,
-        handlers::get_users:: get_users_by_id,
+        handlers::get_users::get_users_by_id,
         handlers::get_apikeys::get_all_apikeys,
         handlers::get_apikeys::get_apikeys_by_id,
         handlers::get_usage::get_usage_last_day,
@@ -92,6 +92,12 @@ impl Modify for SecurityAddon {
         handlers::get_todos::get_todos_by_id,
         handlers::get_health::get_health,
         handlers::post_users::post_user,
+        handlers::post_users::post_user_register_verify,
+        handlers::post_users::post_user_register,
+        handlers::post_users::post_user_password_reset_verify,
+        handlers::post_users::post_user_password_reset,
+        handlers::post_users::post_user_profilepicture,
+        handlers::patch_users::patch_user_profile,
         handlers::post_apikeys::post_apikey,
         handlers::post_todos::post_todo,
         handlers::rotate_apikeys::rotate_apikey,
@@ -129,7 +135,14 @@ impl Modify for SecurityAddon {
             models::user::User,
             models::user::UserGetResponse,
             models::user::UserInsertBody,
-            models::user::UserInsertResponse
+            models::user::UserInsertResponse,
+            models::user::UserUpdateBody,
+            models::user::UserUpdateResponse,
+            models::user::UserRegisterEmailVerifyBody,
+            models::user::UserRegisterBody,
+            models::user::UserPasswordResetCode,
+            models::user::UserPasswordResetConfirmBody,
+            models::user::UserPasswordResetRequestBody
         )
     ),
     tags(
@@ -155,6 +168,7 @@ pub fn create_routes(state: Arc<AppState>) -> Router<()> {
     Router::new()
         .merge(create_homepage_route(state.clone()))
         .merge(create_auth_routes(state.clone()))
+        .merge(create_user_root_routes(state.clone()))
         .merge(swagger_ui)
         .nest("/users", create_user_routes(state.clone()))
         .nest("/apikeys", create_apikey_routes(state.clone()))

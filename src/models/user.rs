@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use sqlx::FromRow;
 use uuid::Uuid;
-use chrono::{NaiveDate, NaiveDateTime};
+use chrono::{NaiveDate, NaiveDateTime, DateTime, Utc};
 use utoipa::ToSchema;
 use validator::Validate;
 
@@ -25,6 +25,8 @@ pub struct UserRow {
     pub description: Option<String>,
     pub password_hash: String,
     pub totp_secret: Option<String>,
+    pub verification_code: Option<String>,
+    pub verification_expires_at: Option<DateTime<Utc>>,
 }
 
 /// Internal domain model (non-SQLx)
@@ -47,7 +49,10 @@ pub struct User {
     pub password_hash: String,
     #[serde(skip)]
     pub totp_secret: Option<String>,
+    pub verification_code: Option<String>,
+    pub verification_expires_at: Option<DateTime<Utc>>,
 }
+
 
 /// Public user response
 #[derive(Debug, Serialize, Clone, ToSchema)]
@@ -79,7 +84,7 @@ pub struct UserInsertBody {
     #[validate(custom(function = "validate_password"))]
     pub password: String,
     
-    pub totp: Option<String>,
+    pub totp: Option<bool>,
     
     #[validate(length(min = 1, max = 50))]
     pub first_name: Option<String>,
@@ -194,6 +199,8 @@ impl From<UserRow> for User {
             description: row.description,
             password_hash: row.password_hash,
             totp_secret: row.totp_secret,
+            verification_code: row.verification_code,
+            verification_expires_at: row.verification_expires_at,
         }
     }
 }
@@ -260,9 +267,10 @@ pub struct UserPasswordResetRequestBody {
     pub email: String,
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Deserialize, ToSchema, Validate)]
 #[allow(dead_code)]
 pub struct UserPasswordResetConfirmBody {
+    #[validate(email)]
     pub email: String,
     pub code: String,
     pub new_password: String,
@@ -274,4 +282,46 @@ pub struct UserPasswordResetCode {
     pub user_id: Uuid,
     pub code: String,
     pub expires_at: NaiveDateTime,
+}
+
+/// Data sent by the client to register a new user
+#[derive(Debug, Deserialize, Validate, ToSchema)]
+#[allow(dead_code)]
+pub struct UserRegisterBody {
+    #[validate(length(min = 3, max = 50))]
+    pub username: String,
+
+    #[validate(email)]
+    pub email: String,
+
+    #[validate(custom(function = "validate_password"))]
+    pub password: String,
+
+    #[validate(length(min = 1, max = 50))]
+    pub first_name: Option<String>,
+    
+    #[validate(length(min = 1, max = 50))]
+    pub last_name: Option<String>,
+
+    #[validate(length(equal = 2))]
+    pub country_code: Option<String>,
+
+    #[validate(length(min = 2, max = 5))]
+    pub language_code: Option<String>,
+
+    #[validate(custom(function = "validate_birthday"))]
+    pub birthday: Option<NaiveDate>,
+
+    #[validate(length(max = 1000))]
+    pub description: Option<String>,
+
+    pub totp: Option<bool>,
+}
+
+#[derive(Deserialize, Validate, ToSchema)]
+#[allow(dead_code)]
+pub struct UserRegisterEmailVerifyBody {
+    #[validate(email)]
+    pub email: String,
+    pub code: String,
 }

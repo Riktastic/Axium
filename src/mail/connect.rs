@@ -35,13 +35,12 @@ pub async fn connect_to_mail() -> Result<MailerState, SmtpError> {
         .from(smtp_user.parse::<lettre::message::Mailbox>().map_err(|e| SmtpError::OperationError(e.to_string()))?)
         .to(smtp_user.parse::<lettre::message::Mailbox>().map_err(|e| SmtpError::OperationError(e.to_string()))?)
         .subject("SMTP Test")
-        .body("This is a test email sent from the Axium SMTP connection validation. You can ignore this mail.".to_string())
+        .body("This is a test email sent from the Axium SMTP connection validation. Axium will sent a verification mail during each startup to test if email is working properly. You can ignore this mail.".to_string())
         .map_err(|e| SmtpError::OperationError(e.to_string()))?;
 
     // Send the test email and validate the connection
     match mailer.send(test_email).await {
         Ok(_) => {
-            println!("Test email sent successfully.");
             Ok(MailerState {
                 mailer,
                 username: smtp_user,

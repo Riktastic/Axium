@@ -10,7 +10,7 @@ use uuid::Uuid;
 use std::sync::Arc;
 
 use crate::models::user::{User, UserGetResponse};
-use crate::database::users::{fetch_all_users_from_db, fetch_user_by_field_from_db};
+use crate::database::users::{fetch_all_active_users_from_db, fetch_active_user_by_field_from_db};
 use crate::routes::AppState;
 
 // Get all users
@@ -29,7 +29,7 @@ use crate::routes::AppState;
 )]
 #[instrument(skip(state))]
 pub async fn get_all_users(State(state): State<Arc<AppState>>) -> impl IntoResponse {
-    match fetch_all_users_from_db(&state.database).await {
+    match fetch_all_active_users_from_db(&state.database).await {
         Ok(users) => Ok(Json(users)),
         Err(_) => Err((
             StatusCode::INTERNAL_SERVER_ERROR,
@@ -80,7 +80,7 @@ pub async fn get_users_by_id(
         }
     };
 
-    match fetch_user_by_field_from_db(&state.database, "id", &user_id.to_string()).await {
+    match fetch_active_user_by_field_from_db(&state.database, "id", &user_id.to_string()).await {
         Ok(Some(user)) => Ok(Json(user)),
         Ok(None) => Err((
             StatusCode::NOT_FOUND,

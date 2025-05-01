@@ -4,7 +4,7 @@ use crate::models::user::*;
 use regex::Regex;
 use sqlx::Error;
 use validator::Validate;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, NaiveDate};
 
 /// Retrieves all users with security considerations
 ///
@@ -12,6 +12,7 @@ use chrono::{DateTime, Utc};
 /// - Requires admin privileges (enforced at application layer)
 /// - Excludes sensitive fields like password_hash and totp_secret
 /// - Limits maximum results in production (enforced at application layer)
+#[allow(dead_code)]
 pub async fn fetch_all_users_from_db(pool: &PgPool) -> Result<Vec<UserGetResponse>, sqlx::Error> {
     sqlx::query_as!(
         UserGetResponse,
@@ -24,6 +25,27 @@ pub async fn fetch_all_users_from_db(pool: &PgPool) -> Result<Vec<UserGetRespons
     .await
 }
 
+
+/// Retrieves all active users with security considerations
+///
+/// # Security
+/// - Requires admin privileges (enforced at application layer)
+/// - Excludes sensitive fields like password_hash and totp_secret
+/// - Limits maximum results in production (enforced at application layer)
+pub async fn fetch_all_active_users_from_db(pool: &PgPool) -> Result<Vec<UserGetResponse>, sqlx::Error> {
+    sqlx::query_as!(
+        UserGetResponse,
+        "SELECT id, username, email, role_level, tier_level, creation_date, 
+        profile_picture_url, first_name, last_name, country_code, language_code, 
+        birthday, description 
+        FROM users
+        WHERE status = 'active'"
+    )
+    .fetch_all(pool)
+    .await
+}
+
+
 /// Safely retrieves user by allowed fields using whitelist validation
 ///
 /// # Allowed Fields
@@ -34,6 +56,7 @@ pub async fn fetch_all_users_from_db(pool: &PgPool) -> Result<Vec<UserGetRespons
 /// # Security
 /// - Only whitelisted fields
 /// - No sensitive data returned
+#[allow(dead_code)]
 pub async fn fetch_user_by_field_from_db(
     pool: &PgPool,
     field: &str,
@@ -96,6 +119,81 @@ pub async fn fetch_user_by_field_from_db(
     }
 }
 
+
+/// Safely retrieves only active user by allowed fields using whitelist validation
+///
+/// # Allowed Fields
+/// - id: UUID
+/// - email: valid email
+/// - username: valid username
+///
+/// # Security
+/// - Only whitelisted fields
+/// - No sensitive data returned
+/// - Only users with status = 'active'
+pub async fn fetch_active_user_by_field_from_db(
+    pool: &PgPool,
+    field: &str,
+    value: &str,
+) -> Result<Option<UserGetResponse>, Error> {
+    match field {
+        "id" => {
+            let uuid = value.parse::<Uuid>().map_err(|_| {
+                Error::Decode(Box::new(std::io::Error::new(
+                    std::io::ErrorKind::InvalidInput,
+                    "Invalid UUID format",
+                )))
+            })?;
+
+            sqlx::query_as!(
+                UserGetResponse,
+                r#"
+                SELECT id, username, email, role_level, tier_level, creation_date, 
+                       profile_picture_url, first_name, last_name, country_code, 
+                       language_code, birthday, description
+                FROM users
+                WHERE id = $1 AND status = 'active'
+                "#,
+                uuid
+            )
+            .fetch_optional(pool)
+            .await
+        }
+        "email" => {
+            sqlx::query_as!(
+                UserGetResponse,
+                r#"
+                SELECT id, username, email, role_level, tier_level, creation_date, 
+                       profile_picture_url, first_name, last_name, country_code, 
+                       language_code, birthday, description
+                FROM users
+                WHERE email = $1 AND status = 'active'
+                "#,
+                value
+            )
+            .fetch_optional(pool)
+            .await
+        }
+        "username" => {
+            sqlx::query_as!(
+                UserGetResponse,
+                r#"
+                SELECT id, username, email, role_level, tier_level, creation_date, 
+                       profile_picture_url, first_name, last_name, country_code, 
+                       language_code, birthday, description
+                FROM users
+                WHERE username = $1 AND status = 'active'
+                "#,
+                value
+            )
+            .fetch_optional(pool)
+            .await
+        }
+        _ => Err(Error::ColumnNotFound(field.to_string())),
+    }
+}
+
+
 /// Retrieves user by email with validation
 ///
 /// # Security
@@ -110,13 +208,62 @@ pub async fn fetch_user_by_email_from_db(
         r#"SELECT id, username, email, password_hash, totp_secret, 
            role_level, tier_level, creation_date, profile_picture_url, 
            first_name, last_name, country_code, language_code, 
-           birthday, description
+           birthday, description, verification_code, verification_expires_at
            FROM users WHERE email = $1"#,
         email
     )
     .fetch_optional(pool)
     .await
 }
+
+/// Retrieves user by email, only if status is 'active'
+///
+/// # Security
+/// - Parameterized query prevents SQL injection
+/// - Returns Option to avoid user enumeration risks
+pub async fn fetch_active_user_by_email_from_db(
+    pool: &PgPool,
+    email: &str,
+) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(
+        User,
+        r#"SELECT id, username, email, password_hash, totp_secret, 
+           role_level, tier_level, creation_date, profile_picture_url, 
+           first_name, last_name, country_code, language_code, 
+           birthday, description, verification_code, verification_expires_at
+           FROM users 
+           WHERE email = $1 AND status = 'active'"#,
+        email
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+
+/// Retrieves user by email, only if status is 'active'
+///
+/// # Security
+/// - Parameterized query prevents SQL injection
+/// - Returns Option to avoid user enumeration risks
+pub async fn fetch_pending_user_by_email_from_db(
+    pool: &PgPool,
+    email: &str,
+) -> Result<Option<User>, sqlx::Error> {
+    sqlx::query_as!(
+        User,
+        r#"SELECT id, username, email, password_hash, totp_secret, 
+           role_level, tier_level, creation_date, profile_picture_url, 
+           first_name, last_name, country_code, language_code, 
+           birthday, description, verification_code, verification_expires_at
+           FROM users 
+           WHERE email = $1 AND status = 'pending'"#,
+        email
+    )
+    .fetch_optional(pool)
+    .await
+}
+
+
 
 /// Securely deletes a user by ID
 ///
@@ -183,6 +330,83 @@ pub async fn insert_user_into_db(
 
     Ok(row)
 }
+
+/// Inserts a new pending user for registration (with email verification).
+///
+/// # Arguments
+/// - `pool`: The database connection pool.
+/// - `username`: The new user's username.
+/// - `email`: The new user's email.
+/// - `password_hash`: The hashed password.
+/// - `verification_code`: The email verification code.
+/// - `verification_expires_at`: When the code expires.
+///
+/// # Returns
+/// - `Ok(Uuid)` with the new user's ID on success.
+/// - `Err(Error)` on failure.
+pub async fn insert_pending_user_into_db(
+    pool: &PgPool,
+    username: &str,
+    email: &str,
+    password_hash: &str,
+    verification_code: &str,
+    verification_expires_at: DateTime<Utc>,
+
+    // Optional fields:
+    first_name: Option<&str>,
+    last_name: Option<&str>,
+    country_code: Option<&str>,
+    language_code: Option<&str>,
+    birthday: Option<NaiveDate>,
+    description: Option<&str>,
+    totp_secret: Option<&str>,
+) -> Result<Uuid, Error> {
+    // Validate username
+    let username = username.trim();
+    if username.len() < 3 || username.len() > 30 {
+        return Err(Error::Protocol("Username must be between 3 and 30 characters.".into()));
+    }
+    if !username.chars().all(|c| c.is_alphanumeric() || c == '_') {
+        return Err(Error::Protocol("Invalid username format: only alphanumeric and underscores allowed.".into()));
+    }
+
+    // Validate email
+    let email = email.trim().to_lowercase();
+    if !is_valid_email(&email) {
+        return Err(Error::Protocol("Invalid email format.".into()));
+    }
+
+    // Insert user with pending status and verification code
+    let row = sqlx::query!(
+        r#"
+        INSERT INTO users 
+            (username, email, password_hash, role_level, tier_level, creation_date, status, 
+             verification_code, verification_expires_at,
+             first_name, last_name, country_code, language_code, birthday, description, totp_secret)
+        VALUES 
+            ($1, $2, $3, 1, 1, NOW()::timestamp, 'pending', $4, $5, 
+             $6, $7, $8, $9, $10, $11, $12)
+        RETURNING id
+        "#,
+        username,
+        email,
+        password_hash,
+        verification_code,
+        verification_expires_at,
+        first_name,
+        last_name,
+        country_code,
+        language_code,
+        birthday,
+        description,
+        totp_secret, // Make sure your DB column is bool or nullable bool
+    )
+    .fetch_one(pool)
+    .await?;
+
+    Ok(row.id)
+}
+
 
 /// Retrieves the profile picture URL for a specific user
 ///
@@ -420,6 +644,34 @@ pub async fn update_user_password_in_db(
     Ok(())
 }
 
+
+/// Activates a user by setting status to 'active' and clearing verification fields.
+///
+/// # Arguments
+/// - `pool`: The database connection pool.
+/// - `user_id`: The user's UUID.
+///
+/// # Returns
+/// - `Ok(())` on success.
+/// - `Err(sqlx::Error)` on failure.
+pub async fn activate_user_in_db(
+    pool: &PgPool,
+    user_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "UPDATE users
+         SET status = 'active',
+             verification_code = NULL,
+             verification_expires_at = NULL
+         WHERE id = $1",
+        user_id
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+
 /// Fetches the current (unexpired) password reset code for a user.
 ///
 /// Returns `Ok(Some(UserPasswordResetCode))` if a code exists and is not expired,
@@ -468,4 +720,33 @@ pub async fn delete_all_password_reset_codes_for_user(
     .execute(pool)
     .await?;
     Ok(())
+}
+
+/// Checks if an active user exists with the given email or username
+///
+/// Returns `true` if a user with the given email or username exists and is active.
+pub async fn check_user_exists_in_db(
+    pool: &PgPool,
+    email: &str,
+    username: &str,
+) -> Result<bool, sqlx::Error> {
+    let user_by_email = sqlx::query_scalar!(
+        r#"SELECT 1 FROM users WHERE email = $1 AND status = 'active' LIMIT 1"#,
+        email
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    if user_by_email.is_some() {
+        return Ok(true);
+    }
+
+    let user_by_username = sqlx::query_scalar!(
+        r#"SELECT 1 FROM users WHERE username = $1 AND status = 'active' LIMIT 1"#,
+        username
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(user_by_username.is_some())
 }

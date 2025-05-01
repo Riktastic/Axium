@@ -10,7 +10,7 @@ use tracing::{error, warn, debug, instrument};
 use std::sync::Arc;
 
 use crate::utils::auth::{encode_jwt, verify_hash};
-use crate::database::{apikeys::fetch_active_apikeys_by_user_id_from_db, users::fetch_user_by_email_from_db};
+use crate::database::{apikeys::fetch_active_apikeys_by_user_id_from_db, users::fetch_active_user_by_email_from_db};
 use crate::models::auth::LoginData;
 use crate::core::config::{get_env_bool, get_env_with_default, get_env_u64};
 use crate::routes::AppState;
@@ -44,7 +44,7 @@ pub async fn login(
     Json(user_data): Json<LoginData>,
 ) -> Result<impl IntoResponse, (StatusCode, Json<serde_json::Value>)> {
     // Fetch the user from the database based on their email.
-    let user = match fetch_user_by_email_from_db(&state.database, &user_data.email).await {
+    let user = match fetch_active_user_by_email_from_db(&state.database, &user_data.email).await {
         Ok(Some(user)) => user,
         Ok(None) | Err(_) => {
             // Log the error for failed login attempt
