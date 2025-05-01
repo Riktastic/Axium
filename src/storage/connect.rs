@@ -57,5 +57,20 @@ pub async fn connect_to_storage() -> Result<S3Client, StorageError> {
         ))
         .build();
 
-    Ok(S3Client::from_conf(s3_config))
+    // Create the S3 client
+    let s3_client = S3Client::from_conf(s3_config);
+
+    // Verify the connection by listing the buckets
+    match s3_client.list_buckets().send().await {
+        Ok(response) => {
+            if response.buckets().is_empty() {
+                Err(StorageError::ConnectionError("No buckets found in storage".to_string()))
+            } else {
+                Ok(s3_client)
+            }
+        },
+        Err(err) => {
+            Err(StorageError::ConnectionError(format!("Failed to connect to storage: {}", err)))
+        }
+    }
 }
