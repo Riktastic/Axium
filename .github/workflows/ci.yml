@@ -1,40 +1,31 @@
-name: Rust CI
+name: coverage
 
-on:
+on: 
   push:
     branches:
-      - main
-  pull_request:
-    branches:
-      - main
+      - main  # Adjust if you have different branches you want to trigger this on
 
 jobs:
-  build:
+  test:
+    name: coverage
     runs-on: ubuntu-latest
+    container:
+      image: xd009642/tarpaulin:develop-nightly
+      options: --security-opt seccomp=unconfined
 
     steps:
-      - name: Checkout code
+      # Step 1: Checkout repository
+      - name: Checkout repository
         uses: actions/checkout@v2
 
-      - name: Set up Rust
-        uses: actions/setup-rust@v1
-        with:
-          rust-version: stable
+      # Step 2: Generate code coverage with Tarpaulin
+      - name: Generate code coverage
+        run: |
+          cargo +nightly tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
 
-      - name: Install dependencies
-        run: cargo build --release
-
-      - name: Run tests
-        run: cargo test --release
-
-      - name: Install coverage tools
-        run: cargo install cargo-tarpaulin
-
-      - name: Run coverage report
-        run: cargo tarpaulin --all --out Coveralls
-
+      # Step 3: Upload to Coveralls
       - name: Upload coverage to Coveralls
         env:
-          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}
+          COVERALLS_REPO_TOKEN: ${{ secrets.COVERALLS_REPO_TOKEN }}  # Make sure to store your token in GitHub Secrets
         run: |
-          curl -s https://coveralls.io/github/Riktastic/Axium?service=github-actions&token=${{ secrets.COVERALLS_REPO_TOKEN }} -d coverage=@coverage.json
+          curl -s https://coveralls.io/github/Riktastic/Axium?service=github-actions&token=${{ secrets.COVERALLS_REPO_TOKEN }} -d coverage=@target/debug/coverage.xml
