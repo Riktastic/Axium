@@ -5,6 +5,7 @@ pub mod health;
 pub mod todo;
 pub mod usage;
 pub mod user;
+pub mod referencedata;
 
 use axum::Router;
 use tower_http::trace::TraceLayer;
@@ -37,6 +38,7 @@ use self::{
     auth::create_auth_routes,
     homepage::create_homepage_route,
     health::create_health_route,
+    referencedata::create_referencedata_routes,
 };
 
 #[allow(dead_code)]
@@ -91,6 +93,7 @@ impl Modify for SecurityAddon {
         handlers::get_todos::get_all_todos,
         handlers::get_todos::get_todos_by_id,
         handlers::get_health::get_health,
+        handlers::get_referencedata::get_referencedata,
         handlers::post_users::post_user,
         handlers::post_users::post_user_register_verify,
         handlers::post_users::post_user_register,
@@ -170,6 +173,7 @@ pub fn create_routes(state: Arc<AppState>) -> Router<()> {
         .merge(create_auth_routes(state.clone()))
         .merge(create_user_root_routes(state.clone()))
         .merge(swagger_ui)
+        .merge(create_referencedata_routes(state.clone()))
         .nest("/users", create_user_routes(state.clone()))
         .nest("/apikeys", create_apikey_routes(state.clone()))
         .nest("/usage", create_usage_routes(state.clone()))

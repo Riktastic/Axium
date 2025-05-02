@@ -12,6 +12,8 @@ use crate::models::user::{User, UserUpdateBody, UserUpdateResponse};
 use crate::models::error::ErrorResponse;
 use crate::routes::AppState;
 
+use validator::Validate;
+
 // --- Route Handler ---
 
 /// Updates a user's profile fields with comprehensive validation
@@ -92,11 +94,14 @@ pub async fn patch_user_profile(
     }
 
     // --- Error Handling ---
-    if !validation_errors.is_empty() {
-        return Err((StatusCode::BAD_REQUEST, Json(json!({ 
-            "error": "Validation failed",
-            "details": validation_errors 
-        }))));
+    if let Err(validation_errors) = update.validate() {
+        return Err((
+            StatusCode::BAD_REQUEST,
+            Json(json!({
+                "error": "Validation failed",
+                "details": validation_errors
+            }))
+        ));
     }
 
     // --- Database Operation ---
