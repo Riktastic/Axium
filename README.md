@@ -9,7 +9,12 @@
 > ⚠️ **Warning:** This project is under active development. Pushed changes have been tested. But it might not yet be production ready.
 
 ## Summary
-Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3, Redis, and PostgreSQL. It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
+Axium is a high-performance, security-focused API boilerplate built using Rust, Axum, SQLx, S3, Redis, and PostgreSQL. 
+
+It provides a ready-to-deploy solution with modern best practices, including JWT authentication, role-based access control (RBAC), structured logging, and enterprise-grade security. With a focus on developer experience, Axium offers auto-generated API documentation, efficient database interactions, and an ergonomic code structure for ease of maintenance and scalability.
+
+The project uses its own routing wrapper built on top of Axum.
+The wrapper was created to simplify the integration of the RBAC and unify the passing of connections to external services (database, Redis, S3). 
 
 ## Table of Contents
 - [🦖 Axium](#-axium)
@@ -69,11 +74,10 @@ _Relational data made simple_
 _Engineered for speed at scale_  
 - Brotli compression (11-level optimization)  
 - Intelligent request caching strategies  
-- Zero-copy deserialization pipelines  
 
 ### **Operational Visibility**  
 _Production monitoring made easy_  
-- Docker-healthcheck compatible endpoint:  
+- Docker-healthcheck / OpenTelemetry compatible endpoint:  
 ```json
 {
     "details": {
