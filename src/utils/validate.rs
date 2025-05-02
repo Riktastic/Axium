@@ -102,7 +102,7 @@ pub fn validate_birthday(birthday: &NaiveDate) -> Result<(), ValidationError> {
 
     if *birthday < earliest || *birthday > today {
         let mut err = ValidationError::new("birthday_out_of_range");
-        err.message = Some("Birthday must be within the last 120 years and not in the future".into());
+        err.message = Some("Birthday must be within the last 120 years and not in the future.".into());
         return Err(err);
     }
     Ok(())
@@ -113,7 +113,7 @@ pub fn validate_birthday(birthday: &NaiveDate) -> Result<(), ValidationError> {
 pub fn validate_country_code(code: &str) -> Result<(), ValidationError> {
     if !countries().contains_key(code) {
         let mut err = ValidationError::new("invalid_iso3166_country_code");
-        err.message = Some(format!("'{}' is not a valid ISO 3166-1 alpha-2 country code", code).into());
+        err.message = Some(format!("'{}' is not a valid ISO 3166-1 alpha-2 country code.", code).into());
         return Err(err);
     }
     Ok(())
@@ -133,7 +133,7 @@ pub fn validate_language_code(code: &str) -> Result<(), ValidationError> {
     if !languages().contains_key(code) {
         let mut err = ValidationError::new("invalid_language_code");
         err.message = Some(
-            format!("'{}' is not a valid language-region code (e.g., en_US, nl-NL)", code).into()
+            format!("'{}' is not a valid language-region code (e.g., en_US, nl-NL).", code).into()
         );
         return Err(err);
     }
