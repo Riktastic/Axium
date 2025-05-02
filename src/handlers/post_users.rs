@@ -124,34 +124,21 @@ pub async fn post_user_profilepicture(
         }
     };
 
-    let bucket = get_env_with_default("STORAGE_BUCKET_PROFILE_PICTURES", "profile_pictures");
+    let bucket = "profile-pictures"; // or get from config/env
+    let endpoint = &state.storage.endpoint_url;
     
-    let debug = get_env_bool("IMAGE_DEBUG", false);
-
-    // Check existing profile picture
-    if let Some(old_url) = fetch_profile_picture_url_from_db(&state.database, user_id)
-        .await
-        .map_err(|e| {
-            error!("DB fetch error: {e}");
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Failed to check existing profile picture" })),
-            )
-        })?
-    {
-        // Extract object key from URL
-        let old_key = old_url.split('/').last().ok_or_else(|| {
-            (
-                StatusCode::INTERNAL_SERVER_ERROR,
-                Json(json!({ "error": "Invalid existing profile picture URL" })),
-            )
-        })?;
-
-        // Delete old image from storage
-        if let Err(e) = delete_from_storage(&state.storage, &bucket, old_key).await {
-            error!("Old image deletion failed: {e}");
-            // Continue with upload despite deletion failure
-        }
+    // Remove the endpoint prefix
+    let path = old_url.strip_prefix(endpoint).unwrap_or(&old_url);
+    // Remove leading slash if present
+    let path = path.trim_start_matches('/');
+    
+    // Now, remove the bucket prefix
+    let object_key = path.strip_prefix(&format!("{}/", bucket)).unwrap_or(path);
+    
+    // Now use object_key
+    if let Err(e) = delete_from_storage(&state.storage, bucket, object_key).await {
+        error!("Old image deletion failed: {e}");
+        // Continue with upload despite deletion failure
     }
 
     while let Some(field) = multipart.next_field().await.map_err(|e| {
