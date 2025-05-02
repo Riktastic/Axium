@@ -1,7 +1,6 @@
 use lettre::{AsyncTransport, Message, message::{header, MultiPart, SinglePart}};
 use thiserror::Error;
-use once_cell::sync::OnceCell;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use tokio::fs;
 use html2text;
 use html_escape;
@@ -19,7 +18,7 @@ pub enum SmtpError {
     OperationError(String),
 }
 
-static FOOTER_HTML: OnceCell<Arc<String>> = OnceCell::new();
+static FOOTER_HTML: OnceLock<Arc<String>> = OnceLock::new();
 
 /// Loads the footer HTML from file (once per process).
 async fn get_footer_html() -> Result<Arc<String>, SmtpError> {
@@ -29,7 +28,7 @@ async fn get_footer_html() -> Result<Arc<String>, SmtpError> {
         let footer = fs::read_to_string("src/mail/footer.html")
             .await
             .map_err(|e| SmtpError::OperationError(format!("Failed to read footer.html: {}", e)))?;
-        Ok(FOOTER_HTML.get_or_init(|| Arc::<String>::new(footer)).clone())
+        Ok(FOOTER_HTML.get().unwrap().clone()) 
     }
 }
 

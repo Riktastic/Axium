@@ -9,11 +9,11 @@ edition = "2021"
     
 [dependencies]
 # Web framework and server
-axum = { version = "0.8.3", features = ["json", "multipart"] }
+axum = { version = "0.8.4", features = ["json", "multipart"] }
 axum-server = { version = "0.7.2", features = ["tls-rustls"] }
 
 # Database interaction
-sqlx = { version = "0.8.3", features = ["runtime-tokio-rustls", "postgres", "migrate", "uuid", "chrono"] }
+sqlx = { version = "0.8.5", features = ["runtime-tokio-rustls", "postgres", "migrate", "uuid", "chrono"] }
 uuid = { version = "1.16.0", features = ["serde"] }
 rand = "0.8.5"
 rand_core = "0.6.4" # 2024-2-3: SQLx 0.8.3 does not support 0.9. 
@@ -34,7 +34,6 @@ bytes = "1.10.1"
 lettre = { version = "0.11", features = ["tokio1", "builder", "tokio1-native-tls", "file-transport"] }
 html2text = "0.14.3"
 html-escape = "0.2"
-once_cell = "1.21.3"
 
 # Serialization and deserialization
 serde = { version = "1.0.219", features = ["derive"] }
@@ -63,7 +62,7 @@ tracing = "0.1.41"
 tracing-subscriber = "0.3.19"
 
 # System information
-sysinfo = "0.34.2"
+sysinfo = "0.35.0"
 
 # Date and time handling
 chrono = { version = "0.4.41", features = ["serde"] }
@@ -88,7 +87,7 @@ utoipa = { version = "5.3.1", features = ["axum_extras", "chrono", "uuid"] }
 utoipa-swagger-ui = { version = "9.0.1", features = ["axum"] } 
 
 [profile.release]
-opt-level = "z"        # Optimize for size ("s" may be worth testing too)
+opt-level = "z"        # Optimize for size
 lto = true             # Enable Link Time Optimization
 codegen-units = 1      # Allow for maximum cross-module optimization
 panic = "abort"        # Remove unwinding code for smaller binaries

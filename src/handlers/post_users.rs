@@ -12,6 +12,7 @@ use rand::Rng;
 use rand::distributions::Alphanumeric;
 use chrono::Utc;
 use chrono::Duration;
+use tracing::error;
 
 use crate::{core::config::{get_env, get_env_bool, get_env_with_default}, utils::auth::{generate_totp_secret, hash_password}};
 use crate::utils::process_image::process_image;
@@ -130,7 +131,7 @@ pub async fn post_user_profilepicture(
     if let Some(old_url) = fetch_profile_picture_url_from_db(&state.database, user_id)
         .await
         .map_err(|e| {
-            eprintln!("DB fetch error: {e}");
+            error!("DB fetch error: {e}");
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 Json(json!({ "error": "Failed to check existing profile picture" })),
@@ -147,13 +148,13 @@ pub async fn post_user_profilepicture(
 
         // Delete old image from storage
         if let Err(e) = delete_from_storage(&state.storage, &bucket, old_key, &endpoint).await {
-            eprintln!("Old image deletion failed: {e}");
+            error!("Old image deletion failed: {e}");
             // Continue with upload despite deletion failure
         }
     }
 
     while let Some(field) = multipart.next_field().await.map_err(|e| {
-        eprintln!("Multipart error: {e}");
+        error!("Multipart error: {e}");
         (
             StatusCode::BAD_REQUEST,
             Json(json!({ "error": "Invalid file data" })),
@@ -171,7 +172,7 @@ pub async fn post_user_profilepicture(
 
             // Read and validate file size
             let data = field.bytes().await.map_err(|e| {
-                eprintln!("File read error: {e}");
+                error!("File read error: {e}");
                 (
                     StatusCode::BAD_REQUEST,
                     Json(json!({ "error": "Failed to read file" })),
@@ -187,7 +188,7 @@ pub async fn post_user_profilepicture(
 
             // Process image
             let processed_data = process_image(data, 300, 300, debug).await.map_err(|e| {
-                eprintln!("Image processing failed: {e}");
+                error!("Image processing failed: {e}");
                 (
                     StatusCode::UNPROCESSABLE_ENTITY,
                     Json(json!({ "error": format!("Image processing failed: {e}") })),
@@ -208,7 +209,7 @@ pub async fn post_user_profilepicture(
             )
             .await
             .map_err(|e| {
-                eprintln!("Upload error: {e}");
+                error!("Upload error: {e}");
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(json!({ "error": "Upload failed" })),
@@ -217,7 +218,7 @@ pub async fn post_user_profilepicture(
 
             // Update database
             if let Err(e) = update_user_profile_picture_in_db(&state.database, user_id, &file_url).await {
-                eprintln!("DB update error: {e}");
+                error!("DB update error: {e}");
                 return Err((
                     StatusCode::INTERNAL_SERVER_ERROR,
                     Json(json!({ "error": "Failed to update profile URL" })),

@@ -20,6 +20,10 @@ use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 use tokio::signal;
 
+use tracing::error;
+use tracing_subscriber;
+
+
 use axum_server::tls_rustls::RustlsConfig;
 
 async fn shutdown_signal() {
@@ -49,8 +53,8 @@ async fn shutdown_signal() {
 }
 
 fn display_additional_info(protocol: &str, ip: IpAddr, port: u16) {
-    println!("\n📖  Explore the API using Swagger ({0}://{1}:{2}/docs)\n    or import the OpenAPI spec ({0}://{1}:{2}/openapi.json).", protocol, ip, port);
-    println!("\n🩺  Ensure your Docker setup is reliable,\n    by pointing its healthcheck to {0}://{1}:{2}/health", protocol, ip, port);
+    println!("\n📖  Explore the API using Swagger ({protocol}://{ip}:{port}/docs)\n    or import the OpenAPI spec ({protocol}://{ip}:{port}/openapi.json).");
+    println!("\n🩺  Ensure your Docker setup is reliable,\n    by pointing its healthcheck to {protocol}://{ip}:{port}/health");
     println!("\nPress [CTRL] + [C] to gracefully shutdown.");
 }
 
@@ -95,7 +99,7 @@ async fn main() {
         rustls::crypto::aws_lc_rs::default_provider()
         .install_default()
         .unwrap_or_else(|e| {
-            eprintln!("❌ Crypto provider initialization failed: {:?}", e);
+            error!("❌ Crypto provider initialization failed: {:?}", e);
             std::process::exit(1);
         });
 
@@ -109,7 +113,7 @@ async fn main() {
             let certs = tokio::fs::read(&cert_path)
                 .await
                 .unwrap_or_else(|e| {
-                    eprintln!("❌  Failed to read certificate file: {}", e);
+                    error!("❌  Failed to read certificate file: {}", e);
                     std::process::exit(1);
                 });
             
@@ -117,7 +121,7 @@ async fn main() {
             let key = tokio::fs::read(&key_path)
                 .await
                 .unwrap_or_else(|e| {
-                    eprintln!("❌  Failed to read key file: {}", e);
+                    error!("❌  Failed to read key file: {}", e);
                     std::process::exit(1);
                 });
 
@@ -125,14 +129,14 @@ async fn main() {
             let certs = rustls_pemfile::certs(&mut &*certs)
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap_or_else(|e| {
-                    eprintln!("❌  Failed to parse certificates: {}", e);
+                    error!("❌  Failed to parse certificates: {}", e);
                     std::process::exit(1);
                 });
 
             let mut keys = rustls_pemfile::pkcs8_private_keys(&mut &*key)
                 .collect::<Result<Vec<_>, _>>()
                 .unwrap_or_else(|e| {
-                    eprintln!("❌  Failed to parse private key: {}", e);
+                    error!("❌  Failed to parse private key: {}", e);
                     std::process::exit(1);
                 });
 
@@ -148,7 +152,7 @@ async fn main() {
         .with_no_client_auth()
         .with_single_cert(certs, key)
         .unwrap_or_else(|e| {
-            eprintln!("❌  Failed to build TLS configuration: {}", e);
+            error!("❌  Failed to build TLS configuration: {}", e);
             std::process::exit(1);
         });
 
@@ -158,7 +162,7 @@ async fn main() {
 
         let rustls_config = RustlsConfig::from_config(Arc::new(config));
 
-        println!("🔒  Server started with HTTPS at: {}://{}:{}", protocol, ip, port);
+        println!("🔒  Server started with HTTPS at: {protocol}://{ip}:{port}");
 
         display_additional_info(protocol, ip, port);
 
@@ -169,7 +173,7 @@ async fn main() {
         tokio::select! {
             result = server => {
                 if let Err(e) = result {
-                    eprintln!("❌  Server failed to start with HTTPS: {}", e);
+                    error!("❌  Server failed to start with HTTPS: {}", e);
                 }
             },
             _ = shutdown_signal() => {},
@@ -188,7 +192,7 @@ async fn main() {
         tokio::select! {
             result = server => {
                 if let Err(e) = result {
-                    eprintln!("❌  Server failed to start with HTTP: {}", e);
+                    error!("❌  Server failed to start with HTTP: {}", e);
                 }
             },
             _ = shutdown_signal() => {},
