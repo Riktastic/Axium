@@ -14,9 +14,9 @@ use utoipa_swagger_ui::SwaggerUi;
 
 // Application state structure
 use sqlx::PgPool;
-use aws_sdk_s3::Client as S3Client; // S3 connection client
 use deadpool_redis::Pool as RedisPool;  // Redis connection pool
 use crate::mail::MailerState; // SmtpTransport for sending emails
+use crate::storage::StorageState; // S3 client for file storage
 use std::sync::Arc;  // For thread-safe reference counting
 
 pub mod handlers {
@@ -43,7 +43,7 @@ use self::{
 #[derive(Clone, Debug)]
 pub struct AppState {
     pub database: PgPool,
-    pub storage: S3Client,
+    pub storage: StorageState,
     pub cache: RedisPool,
     pub mail: MailerState,
 }

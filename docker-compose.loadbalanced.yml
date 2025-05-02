@@ -72,7 +72,7 @@ services:
       - DATABASE_MIN_CONNECTIONS=${DATABASE_MIN_CONNECTIONS:-5}
 
       # Storage Configuration (MinIO/S3)
-      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://storage}
+      - STORAGE_ENDPOINT=${STORAGE_HOST:-http://storage}
       - STORAGE_PORT=${STORAGE_PORT:-9000}
       - STORAGE_CONSOLE_PORT=${STORAGE_CONSOLE_PORT:-9001}
       - STORAGE_REGION=${STORAGE_REGION:-us-east-1}

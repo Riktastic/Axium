@@ -1,7 +1,6 @@
-use aws_sdk_s3::{
-    Client as S3Client,
-    error::ProvideErrorMetadata,
-};
+use aws_sdk_s3::error::ProvideErrorMetadata;
+
+use crate::storage::StorageState;
 
 /// Deletes an object from S3/MinIO storage
 ///
@@ -9,17 +8,15 @@ use aws_sdk_s3::{
 /// - `s3_client`: Configured S3 client
 /// - `bucket`: Target bucket name
 /// - `object_key`: Object identifier to delete
-/// - `endpoint`: Endpoint URL (for error message context)
 ///
 /// # Returns
 /// - `Ok(())` on successful deletion
 /// - `Err(String)` with detailed error message on failure
 #[allow(dead_code)]
 pub async fn delete_from_storage(
-    s3_client: &S3Client,
+    state: &StorageState,
     bucket: &str,
     object_key: &str,
-    endpoint: &str,
 ) -> Result<(), String> {
     // Input validation
     if bucket.trim().is_empty() {
@@ -28,11 +25,8 @@ pub async fn delete_from_storage(
     if object_key.trim().is_empty() {
         return Err("Delete error: object key is empty".to_string());
     }
-    if endpoint.trim().is_empty() {
-        return Err("Delete error: endpoint is empty".to_string());
-    }
 
-    let delete_result = s3_client
+    let delete_result = state.client
         .delete_object()
         .bucket(bucket)
         .key(object_key)

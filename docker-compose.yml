@@ -79,7 +79,7 @@ services:
       # ==============================
       # ☁️ STORAGE (S3/MINIO) CONFIGURATION
       # ==============================
-      - STORAGE_ENDPOINT=${STORAGE_ENDPOINT:-http://127.0.0.1}
+      - STORAGE_ENDPOINT=${STORAGE_HOST:-http://127.0.0.1}
       - STORAGE_PORT=${STORAGE_PORT:-9000}
       - STORAGE_CONSOLE_PORT=${STORAGE_CONSOLE_PORT:-9001}
       - STORAGE_REGION=${STORAGE_REGION:-us-east-1}

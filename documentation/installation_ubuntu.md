@@ -221,7 +221,7 @@ MinIO is a high-performance, S3-compatible object storage service. Follow these 
 
    Set the following values:
    ```env
-   STORAGE_ENDPOINT="http://localhost"
+   STORAGE_HOST="http://localhost"
    STORAGE_PORT="9000"
    STORAGE_CONSOLE_PORT="9001"
    STORAGE_REGION="us-east-1"

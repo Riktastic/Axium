@@ -14,11 +14,12 @@ use chrono::Utc;
 use chrono::Duration;
 use tracing::error;
 
-use crate::{core::config::{get_env, get_env_bool, get_env_with_default}, utils::auth::{generate_totp_secret, hash_password}};
+use crate::{core::config::{get_env_bool, get_env_with_default}, utils::auth::{generate_totp_secret, hash_password}};
 use crate::utils::process_image::process_image;
 use crate::database::users::{insert_user_into_db, update_user_profile_picture_in_db, fetch_profile_picture_url_from_db, fetch_user_by_email_from_db, insert_user_password_reset_code_into_db, update_user_password_in_db, fetch_current_password_reset_code_from_db, delete_all_password_reset_codes_for_user, check_user_exists_in_db, fetch_pending_user_by_email_from_db, activate_user_in_db, insert_pending_user_into_db};
 use crate::storage::upload::upload_to_storage;
 use crate::storage::delete::delete_from_storage;
+use crate::storage::presign_url::generate_presigned_url;
 use crate::models::user::{UserInsertResponse, UserInsertBody, UserProfilePictureUploadBody, UserProfilePictureUploadResponse, UserPasswordResetRequestBody, UserPasswordResetConfirmBody, UserRegisterBody, UserRegisterEmailVerifyBody, User};
 use crate::routes::AppState;
 use crate::mail::send::send_mail;
@@ -124,7 +125,7 @@ pub async fn post_user_profilepicture(
     };
 
     let bucket = get_env_with_default("STORAGE_BUCKET_PROFILE_PICTURES", "profile_pictures");
-    let endpoint = get_env("STORAGE_ENDPOINT");
+    
     let debug = get_env_bool("IMAGE_DEBUG", false);
 
     // Check existing profile picture
@@ -147,7 +148,7 @@ pub async fn post_user_profilepicture(
         })?;
 
         // Delete old image from storage
-        if let Err(e) = delete_from_storage(&state.storage, &bucket, old_key, &endpoint).await {
+        if let Err(e) = delete_from_storage(&state.storage, &bucket, old_key).await {
             error!("Old image deletion failed: {e}");
             // Continue with upload despite deletion failure
         }
@@ -205,7 +206,6 @@ pub async fn post_user_profilepicture(
                 &bucket,
                 &object_key,
                 &processed_data,
-                &endpoint,
             )
             .await
             .map_err(|e| {
@@ -225,7 +225,27 @@ pub async fn post_user_profilepicture(
                 ));
             }
 
-            return Ok(Json(json!({ "url": file_url })));
+            // Generate pre-signed URL (valid for 15 minutes)
+            let presigned_url = generate_presigned_url(
+                &state.storage,
+                &bucket,
+                &object_key,
+                900
+            )
+            .await
+            .map_err(|e| {
+                error!("Presign error: {e}");
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    Json(json!({ "error": "Failed to generate presigned URL" })),
+                )
+            })?;
+
+
+            return Ok(Json(json!({
+                "profile_picture_url": file_url,
+                "profile_picture_presigned_url": presigned_url
+            })));
         }
     }
 

@@ -1,15 +1,15 @@
-use aws_sdk_s3::Client as S3Client;
 use aws_sdk_s3::primitives::ByteStream;
 use aws_sdk_s3::error::ProvideErrorMetadata;
+
+use crate::storage::StorageState;
 
 /// Uploads a file to S3/MinIO and returns the public URL (or error)
 #[allow(dead_code)]
 pub async fn upload_to_storage(
-    s3_client: &S3Client,
+    state: &StorageState,
     bucket: &str,
     object_key: &str,
     data: &[u8],
-    endpoint: &str, // e.g. "http://127.0.0.1:9000"
 ) -> Result<String, String> {
     // Input validation
     if bucket.trim().is_empty() {
@@ -18,15 +18,12 @@ pub async fn upload_to_storage(
     if object_key.trim().is_empty() {
         return Err("Upload error: object key is empty".to_string());
     }
-    if endpoint.trim().is_empty() {
-        return Err("Upload error: endpoint is empty".to_string());
-    }
     if data.is_empty() {
         return Err("Upload error: data buffer is empty".to_string());
     }
 
     let body = ByteStream::from(data.to_vec());
-    let put_result = s3_client
+    let put_result = state.client
         .put_object()
         .bucket(bucket)
         .key(object_key)
@@ -37,7 +34,7 @@ pub async fn upload_to_storage(
     match put_result {
         Ok(_) => Ok(format!(
             "{}/{}/{}",
-            endpoint.trim_end_matches('/'),
+            state.endpoint_url.trim_end_matches('/'),
             bucket,
             object_key
         )),

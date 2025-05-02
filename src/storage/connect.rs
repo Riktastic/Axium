@@ -6,6 +6,7 @@ use thiserror::Error;
 use url::Url;
 
 use crate::core::config::{get_env, get_env_with_default};
+use crate::storage::StorageState;
 
 #[allow(dead_code)]
 #[derive(Debug, Error)]
@@ -26,9 +27,9 @@ pub enum StorageError {
     OperationError(String),
 }
 
-pub async fn connect_to_storage() -> Result<S3Client, StorageError> {
+pub async fn connect_to_storage() -> Result<StorageState, StorageError> {
     // Load environment variables with clear errors
-    let endpoint_base = get_env("STORAGE_ENDPOINT");
+    let endpoint_base = get_env("STORAGE_HOST");
     let port = get_env_with_default("STORAGE_PORT", "9000"); // Default 
     let region = get_env_with_default("STORAGE_REGION", "us-east-1");
     let access_key = get_env("STORAGE_ACCESS_KEY");
@@ -58,15 +59,18 @@ pub async fn connect_to_storage() -> Result<S3Client, StorageError> {
         .build();
 
     // Create the S3 client
-    let s3_client = S3Client::from_conf(s3_config);
+    let client = S3Client::from_conf(s3_config);
 
     // Verify the connection by listing the buckets
-    match s3_client.list_buckets().send().await {
+    match client.list_buckets().send().await {
         Ok(response) => {
             if response.buckets().is_empty() {
                 Err(StorageError::ConnectionError("No buckets found in storage".to_string()))
             } else {
-                Ok(s3_client)
+                Ok(StorageState {
+                    client,
+                    endpoint_url: endpoint_url.to_string(),
+                })
             }
         },
         Err(err) => {

@@ -9,12 +9,12 @@ use tokio::{task, join};
 use std::sync::{Arc, Mutex};
 use tracing::instrument; // For logging
 use sqlx::PgPool; // Import PgPool for database connection
-use aws_sdk_s3::Client as S3Client; // Import S3Client for storage connection
 use deadpool_redis::Pool; // Import Pool for Redis connection
 use deadpool_redis::redis::AsyncCommands;
 
 use crate::models::health::HealthResponse;
 use crate::routes::AppState;
+use crate::storage::StorageState;
 
 // Health check endpoint
 #[utoipa::path(
@@ -245,8 +245,8 @@ async fn check_database_connection(pool: &PgPool) -> Result<bool, sqlx::Error> {
     sqlx::query("SELECT 1").fetch_one(pool).await.map(|_| true).or_else(|_| Ok(false))
 }
 
-async fn check_storage_connection(client: &S3Client) -> Result<bool, ()> {
-    match client.list_buckets().send().await {
+async fn check_storage_connection(state: &StorageState) -> Result<bool, ()> {
+    match state.client.list_buckets().send().await {
         Ok(_) => Ok(true),
         Err(e) => {
             tracing::error!("Failed to connect to storage: {}", e);
