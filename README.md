@@ -32,7 +32,7 @@ The wrapper was created to simplify the integration of the RBAC and unify the pa
   - [🛠️ Technology stack](#️-technology-stack)
   - [📂 Project structure](#-project-structure)
   - [🌐 Default API endpoints](#-default-api-endpoints)
-  - [| GET    | `/referencedata/{countries/languages}`           | 🚫            | 🚫                | Public repository meant to support a frontend to fill select/dropdown objects.](#-get-----referencedatacountrieslanguages------------------------------------------public-repository-meant-to-support-a-frontend-to-fill-selectdropdown-objects)
+  - [| GET    | `/referencedata/{countries/languages}`           | 🚫            | 🚫                | Public endpoint meant to support a frontend, for example to fill select/dropdown objects.](#-get-----referencedatacountrieslanguages------------------------------------------public-endpoint-meant-to-support-a-frontend-for-example-to-fill-selectdropdown-objects)
     - [**Notes:**](#notes)
   - [📦 Installation \& usage](#-installation--usage)
   - [Integration](#integration)
@@ -213,7 +213,7 @@ axium/                              # Root project directory
 | GET    | `/todos/{id}`                   | ✅            | 🚫                | Get a todo by ID.                                                |
 | DELETE | `/todos/{id}`                   | ✅            | 🚫                | Delete a todo by ID.                                             |
 | **Other routes**                         |               |                   |                                                                  |
-| GET    | `/referencedata/{countries/languages}`           | 🚫            | 🚫                | Public repository meant to support a frontend to fill select/dropdown objects. 
+| GET    | `/referencedata/{countries/languages}`           | 🚫            | 🚫                | Public endpoint meant to support a frontend, for example to fill select/dropdown objects. 
 ---
 
 ### **Notes:**
